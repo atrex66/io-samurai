@@ -17,7 +17,6 @@ This guide explains how to set up the `io-samurai` project for LinuxCNC. It assu
   ```bash
   git clone https://github.com/atrex66/io-samurai.git
   cd io-samurai
-  chmod +x sterminal.sh
   ```
 
 ## 2.
@@ -42,13 +41,14 @@ This guide explains how to set up the `io-samurai` project for LinuxCNC. It assu
 - **Start miniterm**:
   ```bash
   cd ..
+  chmod +x sterminal.sh
   ./sterminal.sh
   ```
 
 ## 6.
 - **Set the IP address for io-samurai in the terminal window**:
-  Default ip:192.168.0.177
-  'ip ###.###.###.###' + Enter
+  - **Default ip:192.168.0.177**
+  - **'ip ###.###.###.###' + Enter**
 - **When the io-samurai restarting you succesfully set the ip address**
 
 
