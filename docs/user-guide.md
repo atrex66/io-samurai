@@ -13,13 +13,15 @@ This guide explains how to set up the `io-samurai` project for LinuxCNC. It assu
 - **Clone the Repository**:
   ```bash
   git clone https://github.com/atrex66/io-samurai.git
-  cd io-samurai```
+  cd io-samurai
+  ```
 
 ## 2.
 - **Install hal driver**:
    ```bash
    cd hal-driver
    chmod +x install.sh
-   ./install.sh```
+   ./install.sh
+   ```
 
 
