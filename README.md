@@ -13,15 +13,15 @@ An open-source, budget-friendly CNC interface for LinuxCNC, featuring 40 MHz SPI
   - LinuxCNC HAL driver (uspace, `.so`) with safety (timeout, data checks).
   - Python library for automation/remote I/O.
   - Mach3 driver in development.
-- **Hardware Support**: Raspberry Pi Pico/Pico 2, W5100S-EVB-Pico, or Pico + W5500-Lite.
+- **Hardware Support**: Raspberry Pi Pico/Pico 2 + W5500-Lite, or W5100S-EVB-Pico (default option).
 - **Open-Source**: All code, schematics, and docs under MIT License.
 
 ## Getting Started
 ### Prerequisites
 - **Hardware**:
   - W5100S-EVB-Pico (~$10).
-  - Raspberry Pi Pico or Pico 2 (~$5–10) + W5500-Lite (~$6).
-  - 10 kΩ linear potentiometer (B10K) for analog inputs.
+  - Raspberry Pi Pico or Pico 2 (~$5) + W5500-Lite (~$6).
+  - 10 kΩ linear potentiometer (B10K) for analog input.
 - **Software**:
   - Pico SDK: `git clone https://github.com/raspberrypi/pico-sdk.git ~/pico-sdk`
   - LinuxCNC (userspace mode, Debian/Ubuntu recommended).
