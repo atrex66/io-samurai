@@ -1,0 +1,21 @@
+﻿Designator,Quantity,Value,Footprint,Package,MPN,DNP,Mount_Type,Description
+A1,1,RaspberryPi_Pico,RaspberryPi_Pico_Common_THT,,,,tht,"Versatile and inexpensive wireless microcontroller module powered by RP2040 dual-core Arm Cortex-M0+ processor up to 133 MHz, 264kB SRAM, 2MB QSPI flash, Infineon CYW43439 2.4GHz 802.11n wireless LAN; also supports Raspberry Pi Pico 2 W"
+"C1, C10, C2, C3, C5, C7, C9",7,100nF,C_1206_3216Metric,,,,smt,Unpolarized capacitor
+C6,1,100uF 9v,CP_Elec_8x5.4,,,,smt,Polarized capacitor
+C8,1,100uF 50v,CP_Elec_8x5.4,,,,smt,Polarized capacitor
+"D1, D10, D11, D12, D13, D14, D15, D16, D2, D3, D4, D5, D6, D7, D8, D9",16,3v6,D_SOD-523,,,,smt,Zener diode
+D17,1,D_Schottky,D_SOD-523,,,,smt,Schottky diode
+"J1, J2, J3",3,Screw_Terminal_01x08,TerminalBlock_Xinya_XY308-2.54-8P_1x08_P2.54mm_Horizontal,,,,tht,"Generic screw terminal, single row, 01x08, script generated (kicad-library-utils/schlib/autogen/connector/)"
+J4,1,Screw_Terminal_01x04,TerminalBlock_Xinya_XY308-2.54-4P_1x04_P2.54mm_Horizontal,,,,tht,"Generic screw terminal, single row, 01x04, script generated (kicad-library-utils/schlib/autogen/connector/)"
+J5,1,Screw_Terminal_01x02,TerminalBlock_Xinya_XY308-2.54-2P_1x02_P2.54mm_Horizontal,,,,tht,"Generic screw terminal, single row, 01x02, script generated (kicad-library-utils/schlib/autogen/connector/)"
+J6,1,Conn_01x04_Pin,PinHeader_1x04_P2.54mm_Vertical,,,,tht,"Generic connector, single row, 01x04, script generated"
+J7,1,Screw_Terminal_01x03,TerminalBlock_Xinya_XY308-2.54-3P_1x03_P2.54mm_Horizontal,,,,tht,"Generic screw terminal, single row, 01x03, script generated (kicad-library-utils/schlib/autogen/connector/)"
+"J8, J9",2,Conn_01x06_Pin,PinHeader_1x06_P2.54mm_Vertical,,,,tht,"Generic connector, single row, 01x06, script generated"
+JP1,1,Jumper_2_Open,SolderJumper-2_P1.3mm_Open_TrianglePad1.0x1.5mm,,,,tht,"Jumper, 2-pole, open"
+"R1, R10, R11, R12, R13, R14, R15, R16, R2, R3, R36, R4, R5, R6, R7, R8, R9",17,10k,R_0805_2012Metric,,,,smt,Resistor
+"R17, R18",2,4k7,R_0805_2012Metric,,,,smt,Resistor
+R19,1,100k,R_0805_2012Metric,,,,smt,Resistor
+"R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32, R33, R34, R35",16,1.5k,R_0805_2012Metric,,,,smt,Resistor
+U1,1,MCP23017_SS,SSOP-28_5.3x10.2mm_P0.65mm,,,,smt,"16-bit I/O expander, I2C, interrupts, w pull-ups, SSOP-28"
+U2,1,MCP23008-xSO,SOIC-18W_7.5x11.6mm_P1.27mm,,,,smt,"8-bit I/O expander, I2C, interrupts, SOIC-18"
+U3,1,TBD62783A,SOIC-18W_7.5x11.6mm_P1.27mm,,,,smt,"8-Channel Source Type Transistor Array, TTL and CMOS compatible, 500mA, 50V, DIP-18/SOP-18/SSOP-18/SOIC-18W"
