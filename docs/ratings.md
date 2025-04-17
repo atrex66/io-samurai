@@ -1,8 +1,16 @@
 # io-samurai Pinout and Ratings
 
+## 1.Power (5v)
+- **Connector**: 2-pin header (J5)
+- **Notes**: Connects to the Vsys pin trough schottky diode
+
+## 2.Power (20v - 50v)
+- **Connector**: 4-pin header (J4)
+- **Notes**: Powering the TD62783
+
 ## Inputs (16)
 - **IC**: MCP23017 (I2C, 3.3 V V_DD, GPA0–GPA7, GPB0–GPB7).
-- **Connector**: 16-pin header.
+- **Connector**: 2x8-pin header.
 - **Protection**: 10 kΩ/1.5 kΩ voltage divider, 3.6 V Zener diode (SOD523).
 - **Ratings**:
   - **Min. Input Voltage**: 20.25 V (for high logic level, ≥ 2.64 V on MCP23017).
