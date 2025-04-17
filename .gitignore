@@ -7,9 +7,8 @@ build/
 *.hex
 
 # ioLibrary_Driver build fájlok
-firmware/pico/ioLibrary_Driver/build/
-firmware/pico/ioLibrary_Driver/*.o
-firmware/pico/ioLibrary_Driver
+firmware/w5100s-evb-pico/ioLibrary_Driver/build/
+firmware/w5100s-evb-pico/ioLibrary_Driver/
 
 # KiCad fájlok
 *.kicad_sch
