@@ -1,4 +1,4 @@
-# io-samurai Pinout and Ratings
+# io-samurai Ratings
 
 ## 1.Power (5v)
 - **Connector**: 2-pin header (J5)
@@ -21,7 +21,7 @@
     - R1 (10 kΩ): ~41.6 mW (24 V).
     - R2 (1.5 kΩ): ~8.64 mW.
     - Zener: ~7.34 mW (24 V).
-- **Notes**: Designed for 20–50 V industrial signals. For 5 V or 12 V inputs, additional interfacing (e.g., transistor, optocoupler) recommended.
+- **Notes**: Designed for 20–50 V signals.
 
 ## Outputs (8)
 - **IC**: TD62783 (8-channel Darlington driver), driven by MCP23008 (I2C, 3.3 V).
@@ -32,7 +32,7 @@
   - **Max. Output Current**: 500 mA/channel, ~1.5 A total (cooling required).
   - **Typical Load**: 5–24 V, 50–200 mA/channel (relays, LEDs).
   - **Power Dissipation**: Max. 1.47 W (25°C, DIP-18).
-- **Notes**: Use flyback diodes (e.g., 1N4007) for inductive loads. MCP23008 controlled via I2C (Pico GP4 SDA, GP5 SCL).
+- **Notes**: Use flyback diodes (e.g., 1N4007) for inductive loads.
 
 ## Analog Inputs (1)
 - **Pins**: GP26 (ADC0).
