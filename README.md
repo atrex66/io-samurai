@@ -1,5 +1,5 @@
 # io-samurai
-An open-source, budget-friendly CNC interface for LinuxCNC, featuring 40 MHz SPI (~6000 Hz), 16 inputs (20–50 V), 8 high-current outputs (50 V, 500 mA), and dual analog inputs (0–3.3 V). Supports Raspberry Pi Pico/Pico 2 with W5100S-EVB-Pico or W5500-Lite Ethernet modules. Prototypes available soon on Tindie!
+An open-source, budget-friendly CNC interface for LinuxCNC, featuring 40 MHz SPI (~6000 Hz), 16 inputs (20–50 V), 8 high-current outputs (50 V, 500 mA), and single analog input (0–3.3 V). Supports Raspberry Pi Pico/Pico 2 with W5100S-EVB-Pico or W5500-Lite Ethernet modules.
 
 ![io-samurai PCB](docs/images/last_proto.png)
 
@@ -39,4 +39,4 @@ An open-source, budget-friendly CNC interface for LinuxCNC, featuring 40 MHz SPI
 
 ## License
 This project is licensed under the MIT License. See [LICENSE](LICENSE).
-The `ioLibrary_Driver` in `firmware/pico/ioLibrary_Driver/` is licensed under the MIT License by Wiznet. See [firmware/pico/ioLibrary_Driver/LICENSE.txt](firmware/pico/ioLibrary_Driver/LICENSE.txt).
+The `ioLibrary_Driver` in `firmware/pico/ioLibrary_Driver.zip` is licensed under the MIT License by Wiznet. See [firmware/pico/ioLibrary_Driver.zip/LICENSE.txt](firmware/pico/ioLibrary_Driver.zip/LICENSE.txt).
