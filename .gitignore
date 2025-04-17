@@ -10,6 +10,14 @@ build/
 firmware/pico/ioLibrary_Driver/build/
 firmware/pico/ioLibrary_Driver/*.o
 
+# KiCad fájlok
+*.kicad_sch
+*.kicad_pcb
+*.kicad_pro
+*.sch-bak
+*.kicad_prl
+*.kicad_mod
+
 # Egyéb
 .vscode/
 *.swp
