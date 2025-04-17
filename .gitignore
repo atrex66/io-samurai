@@ -1,0 +1,16 @@
+# Pico build fájlok
+build/
+*.uf2
+*.elf
+*.bin
+*.dis
+*.hex
+
+# ioLibrary_Driver build fájlok
+firmware/pico/ioLibrary_Driver/build/
+firmware/pico/ioLibrary_Driver/*.o
+
+# Egyéb
+.vscode/
+*.swp
+*.swo

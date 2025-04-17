@@ -1,0 +1,1 @@
+sudo halcompile --install io-samurai.c
