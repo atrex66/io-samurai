@@ -35,7 +35,7 @@ An open-source, budget-friendly CNC interface for LinuxCNC, featuring 40 MHz SPI
    git submodule update --init
 
 ## Support
-- **Patreon**: Join our community at [https://www.patreon.com/c/user?u=43314769](https://www.patreon.com/c/user?u=43314769).
+- **Patreon**: Join our community at [patreon](https://www.patreon.com/c/user?u=43314769).
 
 ## License
 This project is licensed under the MIT License. See [LICENSE](LICENSE).
