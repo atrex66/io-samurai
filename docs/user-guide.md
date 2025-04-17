@@ -48,21 +48,21 @@ This guide explains how to set up the `io-samurai` project for LinuxCNC. It assu
 
 ## 6.
 - **Set the IP address for io-samurai in the terminal window**:
-  - **Default ip:192.168.0.177**
-  - **"ip ###.###.###.###" + Enter**
+  - Default ip:192.168.0.177
+  - "ip ###.###.###.###" + Enter
 - **When the io-samurai restarting you succesfully set the ip address**
 - **Disconnect the io-samurai from the USB (unplug) -> close the terminal window**
 
 ## 7.
 - **Copy the io-samurai.hal file to the linuxcnc/configs/{your_machine} directory**
-  - **add the following line to your {your_machine}.hal file**
-  - **source io-samurai.hal**
+  - add the following line to your {your_machine}.hal file
+  - source io-samurai.hal
 
 ## 8.
 - **Change the ip address to the set io-samurai ip address in the io-samurai.hal first line**
 
 ## 9.
 - **Start your linuxcnc machine**
-  - **check the usable hal pins in 'halshow' like io-samurai.input-00 and io-samurai.output-00**
+  - check the usable hal pins in 'halshow' like io-samurai.input-00 and io-samurai.output-00
 
   
