@@ -9,8 +9,17 @@ This guide explains how to set up the `io-samurai` project for LinuxCNC. It assu
 - `io-samurai` hardware (W5100S-EVB-Pico or W5500-Lite PCB with MCP23017, MCP23008, TD62783, 10 kΩ potentiometer).
 - USB cable for Pico/Pico 2.
 
-## Setup Steps
+## 1.
 - **Clone the Repository**:
   ```bash
   git clone https://github.com/atrex66/io-samurai.git
   cd io-samurai```
+
+## 2.
+- **Install hal driver**:
+   ```bash
+   cd hal-driver
+   chmod +x install.sh
+   ./install.sh```
+
+
