@@ -197,6 +197,22 @@ void process_command(char* command) {
     if (strcmp(command, "ip") == 0) {
         printf("IP: %d.%d.%d.%d\n", net_info.ip[0], net_info.ip[1], net_info.ip[2], net_info.ip[3]);
     } 
+    else if (strcmp(command, "timeout") == 0){
+        printf("Timeout: %d\n", TIMEOUT_US);
+    }
+    else if (strncmp(command, "timeout ", 8) == 0) {
+        int timeout;
+        if (sscanf(command, "timeout %d", &timeout) == 1) {
+            //TIMEOUT_US = timeout;
+            printf("Timeout changed to %d\n", timeout);
+            printf("Saving to flash, please reboot after save....\n");
+            // save_to_flash(&TIMEOUT_US);
+            reset_with_watchdog();
+        }
+        else {
+            printf("Invalid timeout format\n");
+        }
+    }
     else if (strncmp(command, "ip ", 3) == 0) {
         int ip0, ip1, ip2, ip3;
         if (sscanf(command, "ip %d.%d.%d.%d", &ip0, &ip1, &ip2, &ip3) == 4) {

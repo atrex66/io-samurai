@@ -181,7 +181,7 @@ def main():
                 start = row * 8
                 draw_bits(screen, input_bits[start:start+8], INPUT_X, y, color_fn=lambda b: GREEN if b else GRAY)
             pygame.display.flip()
-            #clock.tick(FPS)
+            clock.tick(FPS)
 
     comm.close()
     pygame.quit()

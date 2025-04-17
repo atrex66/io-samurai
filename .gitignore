@@ -10,6 +10,8 @@ build/
 firmware/w5100s-evb-pico/ioLibrary_Driver/build/
 firmware/w5100s-evb-pico/ioLibrary_Driver/
 
+python-lib/__pychache__
+
 # KiCad fájlok
 *.kicad_sch
 *.kicad_pcb

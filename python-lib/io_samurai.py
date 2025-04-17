@@ -11,8 +11,14 @@ class io_samurai:
         self.sock.settimeout(timeout)
         self.jump_index_out = 1
         self.jump_index_inp = 1
-        self.outputs = 0x00  # Kezdeti kimenetek (output-00 - output-07)
-        self.inputs = 0x00   # Kezdeti bemenetek (input-00 - input-07)
+        self.outputs = 0  # Kezdeti kimenetek (output-00 - output-07)
+        self.inputs = 0   # Kezdeti bemenetek (input-00 - input-07)
+        self.state = {
+        'sent_count': 0,
+        'last_inputs': 0,
+        'last_addr': "N/A",
+        'last_error': ""
+        }
 
     def jump_in_table_out(self, input1, input2):
         """
@@ -26,8 +32,9 @@ class io_samurai:
         
         # 8 bites bináris összeadás túlcsordulással: (input1 + input2) % 256
         index = ((input1 + input2) + 1) % 256
+        
         # +1 hozzáadása az indexhez, szintén 8 bites határon belül
-        self.jump_index_out += (index) % 256
+        self.jump_index_out += index
         self.jump_index_out %= 256  # Biztosítjuk, hogy az index 0-255 között maradjon
         
         # Táblában való ugrás
@@ -43,22 +50,21 @@ class io_samurai:
        
         # 8 bites bináris összeadás túlcsordulással: (input1 + input2) % 256
         index = ((input1 + input2 + input3 + input4) + 1) % 256
+
         # +1 hozzáadása az indexhez, szintén 8 bites határon belül
-        self.jump_index_inp += (index) % 256
+        self.jump_index_inp += index
         self.jump_index_inp %= 256  # Biztosítjuk, hogy az index 0-255 között maradjon
-        
+
         # Táblában való ugrás
         result = jump_table[self.jump_index_inp]
         return result
 
     def send_request(self):
         """Kimenetek elküldése a Pico-nak."""
-        outputs = self.outputs
         tx_buffer = bytearray(3)
-        tx_buffer[0] = outputs & 0xFF         # output-08 - output-15 (LSB)
-        tx_buffer[1] = (outputs >> 8) & 0xFF  # output-00 - output-07 (MSB)
+        tx_buffer[0] = self.outputs & 0xFF         # output-08 - output-15 (LSB)
+        tx_buffer[1] = (self.outputs >> 8) & 0xFF  # output-00 - output-07 (MSB)
         tx_buffer[2] = self.jump_in_table_out(tx_buffer[0], tx_buffer[1])
-        # print(f" {tx_buffer[0]:02x} {tx_buffer[1]:02x} {tx_buffer[2]:02x}")
         self.sock.sendto(tx_buffer, (self.pico_ip, self.port))
         return f"{tx_buffer[1]:02X} {tx_buffer[0]:02X} (Checksum: {tx_buffer[2]:02X})"
 
@@ -69,9 +75,8 @@ class io_samurai:
             if len(data) == 5:
                 calc_checksum = self.jump_in_table_inp(data[3], data[2], data[1], data[0])
                 if calc_checksum == data[4]:
-                    inputs = (data[3] << 24) | (data[2] << 16) | (data[1] << 8) | data[0]
-                    self.inputs = inputs
-                    return inputs, addr[0]
+                    self.inputs = (data[3] << 24) | (data[2] << 16) | (data[1] << 8) | data[0]
+                    return self.inputs, addr[0]
                 else:
                     print(f"Buffer: {data[0]:02X} {data[1]:02X} {data[2]:02X} {data[3]:02X} {data[4]:02X}")
                     print(f"Checksum error! Expected {calc_checksum:02X}, got {data[4]:02X}")
@@ -85,12 +90,19 @@ class io_samurai:
             return None, f"Socket error: {e}"
 
     # egyedik kimenet beállítása
-    def set_ouput(self, output, state):
+    def set_ouput(self, out, state):
         """Kimenet beállítása."""
         if state:
-            self.outputs |= (1 << output)
+            self.outputs |= (1 << out)
         else:
-            self.outputs &= ~(1 << output)
+            self.outputs &= ~(1 << out)
+
+    def get_output(self, output):
+        """Kimenet lekérdezése."""
+        if self.outputs & (1 << output):
+            return True
+        else:
+            return False
 
     def get_input(self, input):
         """Bemenet lekérdezése."""
@@ -100,8 +112,24 @@ class io_samurai:
             return False
 
     def update(self):
-        self.send_request()
-        self.receive_inputs()
+         # Network communication
+        try:
+            sent_msg = self.send_request()
+            self.state['sent_count'] += 1
+        except Exception as e:
+            self.state['last_error'] = f"Send error: {str(e)}"
+            sent_msg = "Failed"
+            print(f"Send error: {self.state['last_error']}")
+
+        try:
+            inputs, addr = self.receive_inputs()
+            if inputs is not None:
+                self.state['last_inputs'] = inputs
+                self.state['last_addr'] = addr
+                self.state['last_error'] = ""
+        except Exception as e:
+            self.state['last_error'] = str(e)
+            print(f"Receive error: {self.state['last_error']}")
 
     def close(self):
         """Socket lezárása."""
