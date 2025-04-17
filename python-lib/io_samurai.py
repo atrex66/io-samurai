@@ -89,6 +89,8 @@ class io_samurai:
         """Kimenet beállítása."""
         if state:
             self.outputs |= (1 << output)
+        else:
+            self.outputs &= ~(1 << output)
 
     def get_input(self, input):
         """Bemenet lekérdezése."""
