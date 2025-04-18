@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.12)
-set(PICO_SDK_PATH "$ENV{HOME}/pico-sdk" CACHE PATH "Path to the Pico SDK")
+set(PICO_SDK_PATH "$ENV{HOME}/pico-sdk")
 #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0") # Maximális optimalizáció
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
 
@@ -8,9 +8,21 @@ set(PICO_SDK_PATH "$ENV{HOME}/pico-sdk" CACHE PATH "Path to the Pico SDK")
 set(CMAKE_BUILD_TYPE Relase)
 add_compile_options(-g -O3)
 
-include(${PICO_SDK_PATH}/external/pico_sdk_import.cmake)
+include(pico_sdk_import.cmake)
 
 project(io-samurai C CXX ASM)
+
+# Ellenőrizzük, hogy létezik-e a könyvtár
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/ioLibrary_Driver")
+    message(STATUS "Extracting ioLibrary_Driver...")
+    # Szkript futtatása, ha a könyvtár nem létezik
+    execute_process(
+        COMMAND bash ${CMAKE_SOURCE_DIR}/ioLibraryDriver.sh
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+else()
+    message(STATUS "IoLibrary_Driver already exists.")
+endif()
 
 # WIZnet forrásfájlok
 file(GLOB_RECURSE WIZNET_SOURCES
