@@ -66,23 +66,34 @@ The component exports three HAL functions that run periodically:
 
 ## Example HAL Configuration
 ```hal
-# Load the component
-loadrt io-samurai ip_address=192.168.1.100
+# load the io-samurai component
+loadrt io-samurai ip_address="192.168.0.177"
 
-# Set analog scaling
-setp io-samurai.analog-scale 5.0
+# add the output handling process to servo-thread
+addf io-samurai.udp-io-process-send servo-thread
+# add the output handling process to servo-thread
+addf io-samurai.udp-io-process-recv servo-thread
+# add watchdog process to the servo-thread
+addf io-samurai.watchdog-process servo-thread
 
-# Enable rounding
+# unlink estop loopback
+unlinkp iocontrol.0.user-enable-out
+unlinkp iocontrol.0.emc-enable-in
+
+# add the io-samurai safety function to the estop-loop
+net estop-loop-in iocontrol.0.user-enable-out io-samurai.io-ready-in
+net estop-loop-out iocontrol.0.emc-enable-in io-samurai.io-ready-out
+
+# ANALOG feed and rapid override with 5% steps
+setp io-samurai.analog-scale 24
 setp io-samurai.analog-rounding 1
+setp halui.feed-override.direct-value 1
+setp halui.rapid-override.direct-value 1
+setp halui.feed-override.scale 0.05
+setp halui.rapid-override.scale 0.05
+net jog-speed halui.feed-override.counts halui.rapid-override.counts io-samurai.analog-in-s32
 
-# Connect input to a signal
-net input-00-signal io-samurai.input-00 => some-component.input
-
-# Connect output to a signal
-net output-00-signal some-component.output => io-samurai.output-00
-
-# Monitor connection status
-net connected-signal io-samurai.connected => some-component.status
+```
 
 ## Error Handling
 - **Checksum Errors**: Invalid UDP packet checksums are logged, and `connected` is set to 0.
