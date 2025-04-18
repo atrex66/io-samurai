@@ -121,6 +121,12 @@ class io_samurai:
         scaled_value = adc_value * (self.analog_scale / 4095)
         return scaled_value
 
+    def enable_low_pass_filter(self):
+        self.set_ouput(8, True)  # Enable low pass filter
+    
+    def disable_low_pass_filter(self):
+        self.set_ouput(8, False)
+
     def update(self):
          # Network communication
         try:
