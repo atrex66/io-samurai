@@ -119,6 +119,7 @@ def main():
 
     clock = pygame.time.Clock()
     running = True
+    comm.analog_scale = WIDTH
 
     start_timer()
     
@@ -180,6 +181,9 @@ def main():
             for row, y in enumerate(INPUT_Y_ROWS):
                 start = row * 8
                 draw_bits(screen, input_bits[start:start+8], INPUT_X, y, color_fn=lambda b: GREEN if b else GRAY)
+
+            pygame.draw.rect(screen, GRAY, (0, HEIGHT/2 + 10,  comm.get_analog_input(), 10))
+
             pygame.display.flip()
             clock.tick(FPS)
 

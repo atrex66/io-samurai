@@ -13,6 +13,7 @@ class io_samurai:
         self.jump_index_inp = 1
         self.outputs = 0  # Kezdeti kimenetek (output-00 - output-07)
         self.inputs = 0   # Kezdeti bemenetek (input-00 - input-07)
+        self.analog_scale = 4095
         self.state = {
         'sent_count': 0,
         'last_inputs': 0,
@@ -110,6 +111,15 @@ class io_samurai:
             return True
         else:
             return False
+
+    def get_analog_input(self):
+        lower_byte = self.inputs>> 16 & 0xFF
+        upper_byte = (self.inputs >> 24) & 0xFF
+        # Az alsó és felső bájtok összevonása
+        adc_value = (upper_byte << 8) | lower_byte
+        # Az ADC érték skálázása a self.analog_scale alapján
+        scaled_value = adc_value * (self.analog_scale / 4095)
+        return scaled_value
 
     def update(self):
          # Network communication
