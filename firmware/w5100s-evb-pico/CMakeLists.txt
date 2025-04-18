@@ -66,11 +66,12 @@ target_compile_definitions(io-samurai PRIVATE
 target_link_libraries(io-samurai
     pico_stdlib
     hardware_spi
-    pico_multicore  # Hiányzó multicore támogatás
+    pico_multicore
     pico_stdio_usb
     hardware_gpio
     hardware_dma
     hardware_i2c
+    hardware_adc
 )
 
 target_compile_options(io-samurai PRIVATE)

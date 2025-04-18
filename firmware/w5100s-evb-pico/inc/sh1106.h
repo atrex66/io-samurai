@@ -29,7 +29,7 @@ static const uint8_t init_sequence[] = {
 };
 
 // Puffer a kijelző adatainak tárolására (128x64 / 8 = 1024 bájt)
-static uint8_t display_buffer[WIDTH * HEIGHT / 8];
+uint8_t display_buffer[WIDTH * HEIGHT / 8];
 // Elforgatott betűtípus tömbje (futásidőben töltjük fel)
 static uint8_t rotated_font_8x8[256 * 8];
 
