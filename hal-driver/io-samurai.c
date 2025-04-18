@@ -29,7 +29,7 @@ static struct sockaddr_in local_addr, remote_addr;
 static uint8_t rx_buffer[5];
 static uint8_t tx_buffer[3];
 static long long last_received_time = 0;  // Utolsó sikeres fogadás ideje (nanoszekundum)
-static const long long watchdog_timeout = 5;  // 5 ms timeout
+static const long long watchdog_timeout = 100;  // 100 ms timeout
 static int watchdog_expired = 0;  // Watchdog túlfutás jelzése (0: nem futott túl, 1: túlfutott)
 static long long current_time = 0;  // Globális változó az időzítéshez
 static float filtered_adc = 0.0f; // Szűrt ADC érték
@@ -145,14 +145,12 @@ void udp_io_process_recv(void *arg, long period) {
         } else {
             // Érvénytelen checksum, de még mindig van adat
             rtapi_print_msg(RTAPI_MSG_ERR, "io-samurai: checksum error: %02x != %02x\n", rx_buffer[4], calcChecksum);
-            *d->input_data[0] = 0;
-            *d->input_data[1] = 0;
+            *d->io_ready_out = 0;
             *d->connected = 0;
         }
     } else {
         // Nem érkezett adat, connected = 0
-        *d->input_data[0] = 0;
-        *d->input_data[1] = 0;
+        *d->io_ready_out = 0;
         *d->connected = 0;
     }
 }
