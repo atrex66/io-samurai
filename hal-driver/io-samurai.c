@@ -42,6 +42,7 @@ typedef struct {
     hal_float_t *analog_scale;   // Analóg skála
     hal_bit_t *analog_rounding;  // Analóg kerekítés
     hal_bit_t *input_data[16];   // 16 bemenet
+    hal_bit_t *input_data_not[16]; // 16 bemenet negált értéke
     hal_bit_t *output_data[8];   // 8 kimenet
     hal_bit_t *connected;        // Kapcsolat állapota
     hal_bit_t *io_ready_in;      // io-ready-in
@@ -127,7 +128,9 @@ void udp_io_process_recv(void *arg, long period) {
             last_received_time = current_time;  // Frissítjük az utolsó fogadás idejét (arg-ból kapjuk az időt)
             for (int i = 0; i < 8; i++) {
                 *d->input_data[i] = (rx_buffer[0] >> i) & 0x01;       // input-00 - input-07
+                *d->input_data_not[i] = 1 - *d->input_data[i]; // input-00 - input-07 negált érték
                 *d->input_data[i + 8] = (rx_buffer[1] >> i) & 0x01;   // input-08 - input-15
+                *d->input_data_not[i + 8] = 1 - *d->input_data[i + 8]; // input-08 - input-15 negált érték
             }
             // Analóg bemenet feldolgozása (rx_buffer[2] alsó 8 bit, rx_buffer[3] felső 8 bit)
             uint16_t raw_adc = (rx_buffer[3] << 8) | rx_buffer[2]; // 16 bites érték
@@ -203,6 +206,16 @@ int rtapi_app_main(void) {
     // Bemeneti pinek létrehozása (HAL_OUT)
     for (int i = 0; i < 16; i++) {
         r = hal_pin_bit_newf(HAL_OUT, &hal_data->input_data[i], comp_id, "io-samurai.input-%02d", i);
+        if (r < 0) {
+            rtapi_print_msg(RTAPI_MSG_ERR, "io-samurai: ERROR: pin input-%02d export failed with err=%i\n", i, r);
+            hal_exit(comp_id);
+            return r;
+        }
+    }
+
+    // Bemeneti pinek létrehozása (HAL_OUT)
+    for (int i = 0; i < 16; i++) {
+        r = hal_pin_bit_newf(HAL_OUT, &hal_data->input_data_not[i], comp_id, "io-samurai.input-%02d-not", i);
         if (r < 0) {
             rtapi_print_msg(RTAPI_MSG_ERR, "io-samurai: ERROR: pin input-%02d export failed with err=%i\n", i, r);
             hal_exit(comp_id);
