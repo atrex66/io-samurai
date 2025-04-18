@@ -104,7 +104,7 @@ net jog-speed halui.feed-override.counts halui.rapid-override.counts io-samurai.
 The `analog-in-s32` pin exists to support scenarios where LinuxCNC components require integer inputs or where floating-point values need to be overridden for compatibility. For example, some motion control modules may expect integer ADC values, and `analog-in-s32` provides a direct way to supply these without additional conversion.
 
 ## License
-The `io-samurai` component is licensed under the GPL.
+The `io-samurai` component is licensed under the MIT license.
 
 ---
 
