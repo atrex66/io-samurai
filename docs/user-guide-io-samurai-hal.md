@@ -1,6 +1,6 @@
 # HAL User Guide for `io-samurai` Component
 
-The `io-samurai` component is a Hardware Abstraction Layer (HAL) driver for a UDP-based I/O interface, designed for real-time control systems like LinuxCNC. It communicates with a remote device over UDP to handle digital and analog inputs/outputs. This guide explains the component's pins, parameters, and their roles.
+The `io-samurai` component is a Hardware Abstraction Layer (HAL) driver for the io-samurai, designed for LinuxCNC. It communicates with the io-samurai over UDP to handle digital and analog inputs/outputs. This guide explains the component's pins, parameters, and their roles.
 
 ## Overview
 
