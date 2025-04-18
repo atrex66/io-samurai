@@ -10,11 +10,26 @@ bool i2c_check_address(i2c_inst_t *i2c, uint8_t addr) {
     }
 }
 
+
+// Low-pass filter function (EMA)
+float low_pass_filter(float new_sample, float previous_filtered, bool *first_sample) {
+    if (*first_sample) {
+        *first_sample = false;
+        return new_sample; // Initialize with first sample
+    }
+    return ALPHA * new_sample + (1.0f - ALPHA) * previous_filtered;
+}
+
 // -------------------------------------------
 // Core 1 Entry Point (I2C, LCD, MCP23017, MCP23008)
 // -------------------------------------------
 void core1_entry() {
+    uint16_t result;
     uint8_t conf;
+     // Initialize filter variables
+    float filtered_adc = 0.0f;
+    bool first_sample = true;
+
     bool lcd = false;
     i2c_setup();
     sleep_ms(100);
@@ -58,24 +73,32 @@ void core1_entry() {
         }
 #endif
 
+        result = adc_read();
+        // Convert to voltage (3.3V reference)
+        float voltage = (float) result;
+
+        // Apply low-pass filter
+        filtered_adc = low_pass_filter(voltage, filtered_adc, &first_sample);
+
 #ifdef MCP23017_ADDR
         //Reading the GPIO-A and GPIO-B ports from the MCP23017 and writing them to the temp_tx_buffer
         temp_tx_buffer[0] = mcp_read_register(MCP23017_ADDR, 0x13); // beolvassuk az MCP23017 GPIO-B portrol az also input sort 0-7
         temp_tx_buffer[1] = mcp_read_register(MCP23017_ADDR, 0x12); // beolvassuk az MCP23017 GPIO-A portrol az felso input sort 8-15
-        temp_tx_buffer[2] = 0;
-        temp_tx_buffer[3] = 0;
+        temp_tx_buffer[2] = (uint16_t)filtered_adc & 0xFF; // lower byte of ADC
+        temp_tx_buffer[3] = (uint16_t)filtered_adc >> 8; // upper byte of ADC
 
 #endif
         // when oled connected (this slows down the program so use only when needed)
         if (lcd){
+            char ip_str[16]; // this holds the IP address
             // lcd clear
             sh1106_clear();
             // draw output and input bits
             draw_bytes(rx_buffer[0], 0, 0, 0); 
             draw_bytes(tx_buffer[0], tx_buffer[1], 0, 18); 
             draw_text("0123456789ABCDEF", 0, 9);
-            draw_text("io-samurai \x01", 0, 32);
-            char ip_str[16]; // this holds the IP address
+            sprintf(ip_str, "ADC: %d", (uint16_t)filtered_adc);
+            draw_text(ip_str, 0, 32);
             if (checksum_error == 0){
                 if (src_ip[0] != 0) {
                     // IP to string conversion (remote ip)
@@ -173,6 +196,13 @@ int main() {
     network_init();
     printf("Network Init Done\n");
     printf("IP: %d.%d.%d.%d\n", net_info.ip[0], net_info.ip[1], net_info.ip[2], net_info.ip[3]);
+
+    // Initialize ADC
+    adc_init();
+
+    // Select ADC0 (GPIO26)
+    adc_gpio_init(26); // Configures GPIO26 for ADC use
+    adc_select_input(0); // Select ADC input 0 (maps to GPIO26)
 
     // Core1 launch
     multicore_launch_core1(core1_entry);

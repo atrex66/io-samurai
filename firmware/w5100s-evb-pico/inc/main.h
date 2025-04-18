@@ -13,6 +13,7 @@
 #include "hardware/dma.h"
 #include "hardware/gpio.h"
 #include "hardware/i2c.h"
+#include "hardware/adc.h"
 #include "hardware/watchdog.h"
 #include "hardware/clocks.h"
 #include "wizchip_conf.h"
@@ -59,6 +60,9 @@
 // Interrupt konfiguráció
 #define INT_PIN 21
 #define core1_running 1
+
+// Low-pass filter parameters
+#define ALPHA 0.25f // Smoothing factor (0.0 to 1.0, lower = more smoothing)
 
 // -------------------------------------------
 // Network Configuration
