@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <math.h>
 #include "../firmware/w5100s-evb-pico/inc/jump_table.h"
 
 /* module information */
@@ -37,7 +38,9 @@ static bool adc_first_sample = true; // Első minta jelzése az analóg szűrőh
 // Struktúra az összes HAL adat tárolására
 typedef struct {
     hal_float_t *analog_in;      // Analóg bemenet
+    hal_s32_t *analog_in_s32;    // Analóg bemenet 32 bites egész számként
     hal_float_t *analog_scale;   // Analóg skála
+    hal_bit_t *analog_rounding;  // Analóg kerekítés
     hal_bit_t *input_data[16];   // 16 bemenet
     hal_bit_t *output_data[8];   // 8 kimenet
     hal_bit_t *connected;        // Kapcsolat állapota
@@ -129,8 +132,13 @@ void udp_io_process_recv(void *arg, long period) {
             // Analóg bemenet feldolgozása (rx_buffer[2] alsó 8 bit, rx_buffer[3] felső 8 bit)
             uint16_t raw_adc = (rx_buffer[3] << 8) | rx_buffer[2]; // 16 bites érték
             float voltage = (float)raw_adc;
-            filtered_adc = low_pass_filter(voltage, filtered_adc, &adc_first_sample); // Szűrés
-            *d->analog_in = analog_scaling(filtered_adc, *d->analog_scale); // Szűrt érték kiadása a HAL pinre
+            filtered_adc = low_pass_filter(voltage, filtered_adc, &adc_first_sample);
+            float scaled_adc = analog_scaling(filtered_adc, *d->analog_scale); // Szűrés
+            if (*d->analog_rounding == 1) {
+                scaled_adc = roundf(scaled_adc); // Kerekítés
+            }
+            *d->analog_in_s32 = (int32_t)scaled_adc; // Szűrt analóg érték 32 bites egész számként
+            *d->analog_in = scaled_adc; // Szűrt analóg érték
         } else {
             // Érvénytelen checksum, de még mindig van adat
             rtapi_print_msg(RTAPI_MSG_ERR, "io-samurai: checksum error: %02x != %02x\n", rx_buffer[4], calcChecksum);
@@ -243,6 +251,13 @@ int rtapi_app_main(void) {
         return r;
     }
 
+    r = hal_pin_s32_newf(HAL_OUT, &hal_data->analog_in_s32, comp_id, "io-samurai.analog-in-s32");
+    if (r < 0) {
+        rtapi_print_msg(RTAPI_MSG_ERR, "io-samurai: ERROR: pin analog-in export failed with err=%i\n", r);
+        hal_exit(comp_id);
+        return r;
+    }
+
     r = hal_pin_float_newf(HAL_IN, &hal_data->analog_scale, comp_id, "io-samurai.analog-scale");
     if (r < 0) {
         rtapi_print_msg(RTAPI_MSG_ERR, "io-samurai: ERROR: pin analog-in export failed with err=%i\n", r);
@@ -250,6 +265,15 @@ int rtapi_app_main(void) {
         return r;
     }
     *hal_data->analog_scale = 1.0f; // Kezdeti skála érték
+
+    // Kerekítés pin létrehozása (HAL_OUT)
+    r = hal_pin_bit_newf(HAL_IN, &hal_data->analog_rounding, comp_id, "io-samurai.analog-rounding");
+    if (r < 0) {
+        rtapi_print_msg(RTAPI_MSG_ERR, "io-samurai: ERROR: pin analog-rounding export failed with err=%i\n", r);
+        hal_exit(comp_id);
+        return r;
+    }
+    *hal_data->analog_rounding = 0; // Kezdeti kerekítés érték
 
     // Watchdog függvény exportálása
     r = hal_export_funct("io-samurai.watchdog-process", watchdog_process, NULL, 1, 0, comp_id);
