@@ -8,7 +8,7 @@
 
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include "../inc/jump_table.h"
+#include "jump_table.h"
 #include <arpa/inet.h>
 
 #define UDP_IP "192.168.0.177"
