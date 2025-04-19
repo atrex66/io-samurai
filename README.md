@@ -33,6 +33,16 @@ An open-source, budget-friendly CNC interface for LinuxCNC, featuring 40 MHz SPI
    git clone https://github.com/raspberrypi/pico-sdk.git ~/pico-sdk
    cd pico-sdk
    git submodule update --init
+```
+2. **Clone the repository and build from source**
+   ```bash
+   git clone https://github/atrex66/io-samurai
+   cd io-samurai/firmware/w5100s-evb-pico
+   mkdir build
+   cd build
+   cmake ..
+   make
+```
 
 ## Support
 - **Patreon**: Join our community at [patreon](https://www.patreon.com/c/user?u=43314769).
