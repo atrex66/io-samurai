@@ -78,7 +78,13 @@ void core1_entry() {
         float voltage = (float) result;
 
         // Apply low-pass filter
-        filtered_adc = low_pass_filter(voltage, filtered_adc, &first_sample);
+        if (rx_buffer[1] && 0x01){
+            filtered_adc = low_pass_filter(voltage, filtered_adc, &first_sample);
+        }
+        else {
+            filtered_adc = voltage;
+        }
+        
 
 #ifdef MCP23017_ADDR
         //Reading the GPIO-A and GPIO-B ports from the MCP23017 and writing them to the temp_tx_buffer
