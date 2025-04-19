@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.12)
 set(PICO_SDK_PATH "$ENV{HOME}/pico-sdk")
+set(CMAKE_BUILD_TYPE Release) # Release mód
 
 include(pico_sdk_import.cmake)
 
@@ -30,7 +31,6 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcpu=cortex-m0plus -mthumb")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=cortex-m0plus -mthumb")
 set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -mcpu=cortex-m0plus -mthumb")
 
-set(CMAKE_BUILD_TYPE Release) # Release mód
 add_compile_options(-g -O3)
 
 
@@ -42,6 +42,7 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/ioLibrary_Driver
     ${CMAKE_CURRENT_SOURCE_DIR}/ioLibrary_Driver/Ethernet
     ${CMAKE_CURRENT_SOURCE_DIR}/ioLibrary_Driver/Ethernet/W5100S
+    ${CMAKE_CURRENT_SOURCE_DIR}/ioLibrary_Driver/Ethernet/W5500
 )
 
 add_executable(io-samurai
