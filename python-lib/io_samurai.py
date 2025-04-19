@@ -1,6 +1,4 @@
 # -- coding: utf-8 --
-# Python driver for io_samurai UDP I/O
-# Copyright (c) 2025, Viola Zsolt under the MIT License
 
 import socket
 from jump_table import jump_table

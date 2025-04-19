@@ -1,7 +1,6 @@
 # A simple speedometer using Pygame and io_samurai
 # This code creates a speedometer that displays the speed in km/h
 # and updates the needle position based on the analog input.
-# Copyright (c) 2025, Viola Zsolt under the MIT License
 
 import pygame
 import math

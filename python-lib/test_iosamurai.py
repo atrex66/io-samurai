@@ -3,8 +3,6 @@
 # This program tests the io_samurai library by sending and receiving UDP packets and displaying the results in a Pygame window.
 # It allows toggling output bits by clicking on them and displays the received input bits.
 # It also shows the sent count, last received address, and any errors encountered during communication.
-# Copyright (c) 2025, Viola Zsolt under the MIT License
-
 
 import pygame
 from io_samurai import io_samurai
