@@ -1,10 +1,6 @@
 cmake_minimum_required(VERSION 3.12)
 set(PICO_SDK_PATH "$ENV{HOME}/pico-sdk")
 
-set(CMAKE_BUILD_TYPE Release) # Release mód
-
-add_compile_options(-g -O3)
-
 include(pico_sdk_import.cmake)
 
 project(io-samurai C CXX ASM)
@@ -34,6 +30,10 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcpu=cortex-m0plus -mthumb")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=cortex-m0plus -mthumb")
 set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -mcpu=cortex-m0plus -mthumb")
 
+set(CMAKE_BUILD_TYPE Release) # Release mód
+add_compile_options(-g -O3)
+
+
 pico_sdk_init()
 
 include_directories(
@@ -48,6 +48,7 @@ add_executable(io-samurai
     src/main.c
     src/config.c
     src/sh1106.c
+    src/serial_terminal.c
     ${WIZNET_SOURCES}
 )
 

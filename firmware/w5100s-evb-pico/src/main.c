@@ -1,4 +1,68 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "pico/stdlib.h"
+#include "pico/stdio_usb.h"
+#include "pico/multicore.h"
+#include "pico/binary_info.h"
+#include "pico/time.h"
+#include "hardware/spi.h"
+#include "hardware/dma.h"
+#include "hardware/gpio.h"
+#include "hardware/i2c.h"
+#include "hardware/adc.h"
+#include "hardware/watchdog.h"
+#include "hardware/clocks.h"
+#include "serial_terminal.h"
+#include "wizchip_conf.h"
+#include "socket.h"
+#include "config.h"
+#include "sh1106.h"
+#include "jump_table.h"
 #include "main.h"
+
+// -------------------------------------------
+// Network Configuration
+// -------------------------------------------
+wiz_NetInfo net_info = {
+    .mac = {0x00, 0x08, 0xDC, 0x11, 0x22, 0x33}, // Módosítsd!
+    .ip = {192, 168, 0, 177},
+    .sn = {255, 255, 255, 0},
+    .gw = {192, 168, 0, 1},
+    .dns = {8, 8, 8, 8},
+    .dhcp = NETINFO_STATIC
+};
+
+// -------------------------------------------
+// Globális változók
+// -------------------------------------------
+uint8_t rx_buffer[rx_size] = {0, 0, 0x5e};
+uint8_t tx_buffer[tx_size] = {0};
+uint8_t counter = 0;
+uint8_t first_send = 1;
+
+#ifdef USE_SPI_DMA
+static uint dma_tx;
+static uint dma_rx;
+static dma_channel_config dma_channel_config_tx;
+static dma_channel_config dma_channel_config_rx;
+#endif
+
+// IP cím tárolása uint8_t tömbben
+uint8_t ip_address[4] = {0, 0, 0, 0}; // {192, 168, 0, 177} formátum
+uint16_t port = 8888;
+
+uint8_t src_ip[4];
+uint16_t src_port;
+
+// Data integrity variables
+uint8_t checksum_error = 0;
+uint8_t timeout_error = 0;
+uint32_t last_time = 0;
+static absolute_time_t last_packet_time;
+uint32_t TIMEOUT_US = 100000; // 100 ms = 100000 us
+uint32_t time_diff;
+uint8_t temp_tx_buffer[5] = {0x00, 0x00, 0x00, 0x00, 0x04};
 
 bool i2c_check_address(i2c_inst_t *i2c, uint8_t addr) {
     uint8_t buffer[1] = {0x00};
@@ -9,7 +73,6 @@ bool i2c_check_address(i2c_inst_t *i2c, uint8_t addr) {
         return false;
     }
 }
-
 
 // Low-pass filter function (EMA)
 float low_pass_filter(float new_sample, float previous_filtered, bool *first_sample) {
@@ -192,7 +255,6 @@ int main() {
     gpio_pull_up(MCP23017_INTA);
     gpio_pull_up(MCP23017_INTB);
 
-
     // W5100S Init
     w5100s_init();
 
@@ -225,51 +287,6 @@ int main() {
         handle_udp();
         asm volatile("" ::: "memory");
         }
-}
-
-// process the command, and print the result (ip, ip x.x.x.x)
-void process_command(char* command) {
-    printf("Command: %s\n", command);
-    if (strcmp(command, "ip") == 0) {
-        printf("IP: %d.%d.%d.%d\n", net_info.ip[0], net_info.ip[1], net_info.ip[2], net_info.ip[3]);
-    } 
-    else if (strcmp(command, "timeout") == 0){
-        printf("Timeout: %d\n", TIMEOUT_US);
-    }
-    else if (strncmp(command, "timeout ", 8) == 0) {
-        int timeout;
-        if (sscanf(command, "timeout %d", &timeout) == 1) {
-            //TIMEOUT_US = timeout;
-            printf("Timeout changed to %d\n", timeout);
-            printf("Saving to flash, please reboot after save....\n");
-            // save_to_flash(&TIMEOUT_US);
-            reset_with_watchdog();
-        }
-        else {
-            printf("Invalid timeout format\n");
-        }
-    }
-    else if (strncmp(command, "ip ", 3) == 0) {
-        int ip0, ip1, ip2, ip3;
-        if (sscanf(command, "ip %d.%d.%d.%d", &ip0, &ip1, &ip2, &ip3) == 4) {
-            net_info.ip[0] = ip0;
-            net_info.ip[1] = ip1;
-            net_info.ip[2] = ip2;
-            net_info.ip[3] = ip3;
-            // wizchip_setnetinfo(&net_info);
-            printf("IP changed to %d.%d.%d.%d\n", ip0, ip1, ip2, ip3);
-            printf("Saving to flash, please reboot after save....\n");
-            save_to_flash(&net_info);
-            reset_with_watchdog();
-        }
-        else {
-            printf("Invalid IP format\n");
-        }
-    } else if (strcmp(command, "reset") == 0) {
-        reset_with_watchdog();
-    } else {
-        printf("Unknown command\n");
-    }
 }
 
 void reset_with_watchdog() {
@@ -481,39 +498,6 @@ void network_init() {
     wizchip_init(0, 0);
     wizchip_setnetinfo(&net_info);
     }
-
-// input a command from the serial console
-void handle_serial_input() {
-    // receive a character with timeout
-    char inByte = getchar_timeout_us(0);
-    if (inByte == PICO_ERROR_TIMEOUT) {
-        return;
-    }
-    if (inByte != '\r'){
-        if (inByte < 31 || inByte > 126 ) {
-            return;
-        }
-    }
-    printf("%c", inByte);
-    //Message coming in (check not terminating character) and guard for over message size
-    if ( inByte != '\r' && (buffer_pos < 63) )
-    {
-        //Add the incoming byte to our message
-        buffer[buffer_pos] = inByte;
-        buffer_pos++;
-    }
-    //Full message received...
-    else
-    {
-        printf("\n");
-        //Add null character to string
-        buffer[buffer_pos] = '\0';
-        //Process the command
-        process_command(buffer);
-        //Reset for the next message
-        buffer_pos = 0;
-    }
-}
 
 #ifdef USE_SPI_DMA
 static void wizchip_read_burst(uint8_t *pBuf, uint16_t len)

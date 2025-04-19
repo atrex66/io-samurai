@@ -1,37 +1,12 @@
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include "pico/stdlib.h"
-#include "hardware/i2c.h"
+#ifndef SH1106_H
+#define SH1106_H
 
 // Kijelző mérete
 #define WIDTH 128
 #define HEIGHT 64
 
 #define SH1106_ADDR     0x3C
-
-static const uint8_t init_sequence[] = {
-    0xAE,       // Kijelző kikapcsolása
-    0x20, 0x00, // Vízszintes címzési mód
-    0xA8, 0x3F, // Multiplex arány: 64
-    0xD3, 0x00, // Eltolás: 0
-    0x40,       // Kezdő sor: 0
-    0xA1,       // Szegmens újraleképezés
-    0xC8,       // COM szkennelés: fordított
-    0xDA, 0x12, // COM pin konfiguráció
-    0x81, 0x7F, // Kontraszt (közepes érték, próbáld 0xCF vagy 0xFF is)
-    0xA4,       // Normál tartalom
-    0xA6,       // Normál kijelzés (nem invertált)
-    0xD5, 0x80, // Órajel beállítása
-    0x8D, 0x14, // Töltéspumpa engedélyezése
-    0xAF        // Kijelző bekapcsolása (utolsónak!)
-};
-
-// Puffer a kijelző adatainak tárolására (128x64 / 8 = 1024 bájt)
-uint8_t display_buffer[WIDTH * HEIGHT / 8];
-// Elforgatott betűtípus tömbje (futásidőben töltjük fel)
-static uint8_t rotated_font_8x8[256 * 8];
 
 void sh1106_write_cmd(uint8_t cmd);
 void sh1106_write_data(uint8_t *data, size_t len);
@@ -3119,3 +3094,6 @@ static uint8_t console_font_8x8[] = {
     0x00,  /* 00000000 */
     0x00,  /* 00000000 */
 };
+
+#endif /* _FONT_8X8_H */
+/* end of font_8x8.h */

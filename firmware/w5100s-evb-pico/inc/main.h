@@ -1,27 +1,6 @@
 #ifndef MAIN_H
 #define MAIN_H
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include "pico/stdlib.h"
-#include "pico/stdio_usb.h"
-#include "pico/multicore.h"
-#include "pico/binary_info.h"
-#include "pico/time.h"
-#include "hardware/spi.h"
-#include "hardware/dma.h"
-#include "hardware/gpio.h"
-#include "hardware/i2c.h"
-#include "hardware/adc.h"
-#include "hardware/watchdog.h"
-#include "hardware/clocks.h"
-#include "wizchip_conf.h"
-#include "socket.h"
-#include "config.h"
-#include "sh1106.h"
-#include "jump_table.h"
-
 // -------------------------------------------
 // Hardware Defines (Módosítsd a pinjeidnek megfelelően!)
 // -------------------------------------------
@@ -60,63 +39,9 @@
 // Interrupt konfiguráció
 #define INT_PIN 21
 #define core1_running 1
-
 // Low-pass filter parameters
 #define ALPHA 0.25f // Smoothing factor (0.0 to 1.0, lower = more smoothing)
-
-// -------------------------------------------
-// Network Configuration
-// -------------------------------------------
-wiz_NetInfo net_info = {
-    .mac = {0x00, 0x08, 0xDC, 0x11, 0x22, 0x33}, // Módosítsd!
-    .ip = {192, 168, 0, 177},
-    .sn = {255, 255, 255, 0},
-    .gw = {192, 168, 0, 1},
-    .dns = {8, 8, 8, 8},
-    .dhcp = NETINFO_STATIC
-};
-
 #define UDPPort 8888
-
-uint8_t checksum_lut[256] = {
-    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-    // ... (többi érték)
-    0xF8, 0xF9, 0xFA, 0xFB, 0xFC, 0xFD, 0xFE, 0xFF
-};
-
-// -------------------------------------------
-// Globális változók
-// -------------------------------------------
-uint8_t rx_buffer[rx_size] = {0, 0, 0x5e};
-uint8_t tx_buffer[tx_size] = {0};
-uint8_t counter = 0;
-uint8_t first_send = 1;
-// Puffer a parancsokhoz
-char buffer[64];
-int buffer_pos = 0;
-
-#ifdef USE_SPI_DMA
-static uint dma_tx;
-static uint dma_rx;
-static dma_channel_config dma_channel_config_tx;
-static dma_channel_config dma_channel_config_rx;
-#endif
-
-// IP cím tárolása uint8_t tömbben
-uint8_t ip_address[4] = {0, 0, 0, 0}; // {192, 168, 0, 177} formátum
-uint16_t port = 8888;
-
-uint8_t src_ip[4];
-uint16_t src_port;
-
-// Data integrity variables
-uint8_t checksum_error = 0;
-uint8_t timeout_error = 0;
-uint32_t last_time = 0;
-static absolute_time_t last_packet_time;
-static const uint32_t TIMEOUT_US = 100000; // 100 ms = 100000 us
-uint32_t time_diff;
-uint8_t temp_tx_buffer[5] = {0x00, 0x00, 0x00, 0x00, 0x04};
 
 // -------------------------------------------
 // Globális változók a magok közötti kommunikációhoz
@@ -141,8 +66,9 @@ void network_init();
 void calculate_checksum(uint8_t *data, uint8_t len);
 uint8_t xor_checksum(const uint8_t *data, uint8_t len);
 void core1_entry();
-void handle_serial_input();
-void process_command(char* command); // Csak char* command, mert net_info globális
+bool i2c_check_address(i2c_inst_t *i2c, uint8_t addr);
+float low_pass_filter(float new_sample, float previous_filtered, bool *first_sample);
+
 #if USE_SPI_DMA
 static void wizchip_write_burst(uint8_t *pBuf, uint16_t len);
 static void wizchip_read_burst(uint8_t *pBuf, uint16_t len);

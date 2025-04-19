@@ -1,3 +1,5 @@
+#include <stdint.h>
+#include "wizchip_conf.h" // W5100S/W5500 könyvtárból
 #include "config.h"
 #include "hardware/flash.h"
 #include "pico/stdlib.h"
