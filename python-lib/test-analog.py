@@ -25,6 +25,7 @@ GRAY = (100, 100, 100)
 CENTER = (WIDTH // 2, HEIGHT // 2)
 RADIUS = 150
 MAX_SPEED = 240  # Max speed in km/h
+MAX_ANGLE = 300  # Max angle for the speedometer
 NEEDLE_LENGTH = 120
 
 # Font for numbers
@@ -42,7 +43,7 @@ def draw_speedometer(speed):
 
     # Draw tick marks and numbers
     for i in range(0, MAX_SPEED + 1, 10):
-        angle = math.radians(start_angle - (i / MAX_SPEED) * 270)  # Map 0-240 to 135° to -135°
+        angle = math.radians(start_angle - (i / MAX_SPEED) * MAX_ANGLE)  # Map 0-240 to 135° to -135°
         # Major ticks (every 20 km/h)
         if i % 20 == 0:
             start_pos = (
@@ -74,25 +75,28 @@ def draw_speedometer(speed):
             pygame.draw.line(screen, WHITE, start_pos, end_pos, 1)
 
     # Draw the needle
-    angle = math.radians(start_angle - (speed / MAX_SPEED) * 270)  # Map speed to angle
+    angle = math.radians(start_angle - (speed / MAX_SPEED) * MAX_ANGLE)  # Map speed to angle
     needle_end = (
         CENTER[0] + NEEDLE_LENGTH * math.cos(angle),
         CENTER[1] - NEEDLE_LENGTH * math.sin(angle)
     )
-    pygame.draw.line(screen, RED, CENTER, needle_end, 5)
-    pygame.draw.circle(screen, RED, CENTER, 10)  # Center hub
 
     # Draw speed text
     speed_text = font.render(f"{int(speed)} km/h", True, WHITE)
     screen.blit(speed_text, (CENTER[0] - speed_text.get_width() // 2, CENTER[1] + 30))
+
+    pygame.draw.line(screen, RED, CENTER, needle_end, 5)
+    pygame.draw.circle(screen, RED, CENTER, 10)  # Center hub
+
 
 def main():
     clock = pygame.time.Clock()
     speed = 0
     increasing = True
     running = True
-    samurai.analog_scale = MAX_SPEED
+
     # enable low pass filter on the io_samurai
+    samurai.analog_scale = MAX_SPEED
     samurai.enable_low_pass_filter()
 
     while running:

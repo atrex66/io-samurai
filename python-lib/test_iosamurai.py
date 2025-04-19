@@ -13,7 +13,7 @@ os.environ['SDL_VIDEO_VSYNC'] = '1'  # V-Sync bekapcsolása
 period = 0.002
 # Constants
 WIDTH, HEIGHT = 600, 400
-#FPS = 60  # 2 FPS (500 ms cycle time)
+FPS = 60  # 2 FPS (500 ms cycle time)
 
 # Colors
 FOREGROUND = (0, 0, 0)
@@ -34,7 +34,6 @@ INPUT_Y_ROWS = [260, 290, 320, 350]
 INITIAL_OUTPUTS = 0x0000
 start_time = 0
 counter = 0
-benchmark = False
 
 # Initialize Pygame
 pygame.init()
@@ -139,12 +138,11 @@ def main():
             (event.type == pygame.KEYDOWN and event.key == pygame.K_q):
                 running = False
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if not benchmark:
-                    pos = pygame.mouse.get_pos()
-                    for rect, bit in ui.output_rects:
-                        if rect.collidepoint(pos):
-                            state['outputs'] ^= (1 << bit)
-                            break
+                pos = pygame.mouse.get_pos()
+                for rect, bit in ui.output_rects:
+                    if rect.collidepoint(pos):
+                        state['outputs'] ^= (1 << bit)
+                        break
 
         # Network communication
         try:
@@ -166,32 +164,31 @@ def main():
             state['last_error'] = str(e)
             print(f"Receive error: {state['last_error']}")
 
-        if not benchmark:
-            # Blit static elements
-            for surface, pos in ui.static_labels:
-                screen.blit(surface, pos)
+        # Blit static elements
+        for surface, pos in ui.static_labels:
+            screen.blit(surface, pos)
 
-            # Draw dynamic text
-            screen.blit(font.render(sent_msg, True, BACKGROUND), (150, 40))
-            screen.blit(font.render(str(state['sent_count']), True, BACKGROUND), (150, 60))
-            screen.blit(font.render(state['last_addr'], True, BACKGROUND), (380, 260))
-            screen.blit(font.render(state['last_error'], True, RED), (400, 290))
+        # Draw dynamic text
+        screen.blit(font.render(sent_msg, True, BACKGROUND), (150, 40))
+        screen.blit(font.render(str(state['sent_count']), True, BACKGROUND), (150, 60))
+        screen.blit(font.render(state['last_addr'], True, BACKGROUND), (380, 260))
+        screen.blit(font.render(state['last_error'], True, RED), (400, 290))
 
-            # Draw output bits
-            output_bits = format_bits(state['outputs'], 16)
-            draw_bits(screen, output_bits[:8], OUTPUT_X, OUTPUT_Y_ROWS[0])
-            draw_bits(screen, output_bits[8:], OUTPUT_X, OUTPUT_Y_ROWS[1])
+        # Draw output bits
+        output_bits = format_bits(state['outputs'], 16)
+        draw_bits(screen, output_bits[:8], OUTPUT_X, OUTPUT_Y_ROWS[0])
+        draw_bits(screen, output_bits[8:], OUTPUT_X, OUTPUT_Y_ROWS[1])
 
-            # Draw input bits
-            input_bits = format_bits(state['last_inputs'], 32)
-            for row, y in enumerate(INPUT_Y_ROWS):
-                start = row * 8
-                draw_bits(screen, input_bits[start:start+8], INPUT_X, y, color_fn=lambda b: GREEN if b else GRAY)
+        # Draw input bits
+        input_bits = format_bits(state['last_inputs'], 32)
+        for row, y in enumerate(INPUT_Y_ROWS):
+            start = row * 8
+            draw_bits(screen, input_bits[start:start+8], INPUT_X, y, color_fn=lambda b: GREEN if b else GRAY)
 
-            pygame.draw.rect(screen, GRAY, (0, HEIGHT/2 + 10,  comm.get_analog_input(), 10))
+        pygame.draw.rect(screen, GRAY, (0, HEIGHT/2 + 10,  comm.get_analog_input(), 10))
 
-            pygame.display.flip()
-            #clock.tick(FPS)
+        pygame.display.flip()
+        clock.tick(FPS)
 
     comm.close()
     pygame.quit()
