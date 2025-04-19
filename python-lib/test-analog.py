@@ -1,3 +1,8 @@
+# A simple speedometer using Pygame and io_samurai
+# This code creates a speedometer that displays the speed in km/h
+# and updates the needle position based on the analog input.
+# Copyright (c) 2025, Viola Zsolt under the MIT License
+
 import pygame
 import math
 import time
@@ -9,7 +14,7 @@ pygame.init()
 # Set up the display
 WIDTH, HEIGHT = 400, 400
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Speedometer")
+pygame.display.set_caption("Analog Speedometer - io_samurai")
 
 # Colors
 BLACK = (0, 0, 0)
@@ -33,7 +38,7 @@ def draw_speedometer(speed):
     screen.fill(BLACK)
 
     # Draw the outer circle
-    pygame.draw.circle(screen, WHITE, CENTER, RADIUS, 5)
+    pygame.draw.circle(screen, GRAY, CENTER, RADIUS, 5)
     pygame.draw.circle(screen, GRAY, CENTER, RADIUS - 10, 3)
 
     # Draw tick marks and numbers
@@ -80,7 +85,7 @@ def draw_speedometer(speed):
 
     # Draw speed text
     speed_text = font.render(f"{int(speed)} km/h", True, WHITE)
-    screen.blit(speed_text, (CENTER[0] - speed_text.get_width() // 2, CENTER[1] + RADIUS - 100))
+    screen.blit(speed_text, (CENTER[0] - speed_text.get_width() // 2, CENTER[1] + 30))
 
 def main():
     clock = pygame.time.Clock()

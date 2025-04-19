@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+# Test program for io_samurai UDP I/O
+# This program tests the io_samurai library by sending and receiving UDP packets and displaying the results in a Pygame window.
+# It allows toggling output bits by clicking on them and displays the received input bits.
+# It also shows the sent count, last received address, and any errors encountered during communication.
+# Copyright (c) 2025, Viola Zsolt under the MIT License
+
+
 import pygame
 from io_samurai import io_samurai
 import time
@@ -7,12 +15,12 @@ os.environ['SDL_VIDEO_VSYNC'] = '1'  # V-Sync bekapcsolása
 period = 0.002
 # Constants
 WIDTH, HEIGHT = 600, 400
-FPS = 60  # 2 FPS (500 ms cycle time)
+#FPS = 60  # 2 FPS (500 ms cycle time)
 
 # Colors
-WHITE = (0, 0, 0)
+FOREGROUND = (0, 0, 0)
 GRAY = (64,64,64)
-BLACK = (255, 255, 255)
+BACKGROUND = (255, 255, 255)
 GREEN = (0, 128, 0)
 RED = (128, 0, 0)
 
@@ -80,7 +88,7 @@ class UIData:
 
     def create_label(self, text, x, y):
         """Helper to create pre-rendered text surfaces"""
-        return (font.render(text, True, BLACK), (x, y))
+        return (font.render(text, True, BACKGROUND), (x, y))
 
 def draw_bits(surface, bits, x_start, y_start, color_fn=lambda b: GREEN if b else RED):
     """Generic function to draw a row of bits"""
@@ -88,7 +96,7 @@ def draw_bits(surface, bits, x_start, y_start, color_fn=lambda b: GREEN if b els
         x = x_start + i * BIT_SPACING
         color = color_fn(bit)
         pygame.draw.rect(surface, color, (x, y_start, BIT_SIZE, BIT_SIZE))
-        text = font.render(str(bit), True, WHITE)
+        text = font.render(str(bit), True, FOREGROUND)
         surface.blit(text, (x + 6, y_start + 2))
 
 def start_timer():
@@ -125,7 +133,7 @@ def main():
     
     while running:
 
-        screen.fill(WHITE)
+        screen.fill(FOREGROUND)
 
         # Event handling
         for event in pygame.event.get():
@@ -166,9 +174,9 @@ def main():
                 screen.blit(surface, pos)
 
             # Draw dynamic text
-            screen.blit(font.render(sent_msg, True, BLACK), (150, 40))
-            screen.blit(font.render(str(state['sent_count']), True, BLACK), (150, 60))
-            screen.blit(font.render(state['last_addr'], True, BLACK), (380, 260))
+            screen.blit(font.render(sent_msg, True, BACKGROUND), (150, 40))
+            screen.blit(font.render(str(state['sent_count']), True, BACKGROUND), (150, 60))
+            screen.blit(font.render(state['last_addr'], True, BACKGROUND), (380, 260))
             screen.blit(font.render(state['last_error'], True, RED), (400, 290))
 
             # Draw output bits
@@ -185,7 +193,7 @@ def main():
             pygame.draw.rect(screen, GRAY, (0, HEIGHT/2 + 10,  comm.get_analog_input(), 10))
 
             pygame.display.flip()
-            clock.tick(FPS)
+            #clock.tick(FPS)
 
     comm.close()
     pygame.quit()

@@ -1,3 +1,7 @@
+# -- coding: utf-8 --
+# Python driver for io_samurai UDP I/O
+# Copyright (c) 2025, Viola Zsolt under the MIT License
+
 import socket
 from jump_table import jump_table
 
@@ -90,7 +94,9 @@ class io_samurai:
         except OSError as e:
             return None, f"Socket error: {e}"
 
-    # egyedik kimenet beállítása
+    # Set Output state
+    # 0-7: output-00 - output-07
+    # 8: output-08 (low pass filter) enable/disable
     def set_ouput(self, out, state):
         """Kimenet beállítása."""
         if state:
@@ -134,7 +140,6 @@ class io_samurai:
             self.state['sent_count'] += 1
         except Exception as e:
             self.state['last_error'] = f"Send error: {str(e)}"
-            sent_msg = "Failed"
             print(f"Send error: {self.state['last_error']}")
 
         try:
