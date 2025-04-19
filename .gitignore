@@ -11,6 +11,9 @@ firmware/w5100s-evb-pico/ioLibrary_Driver/build/
 firmware/w5100s-evb-pico/ioLibrary_Driver/
 
 python-lib/__pycache__/
+utility/__pycache__/
+utility/benchmark_udp
+
 *.pyc  # Összes .pyc fájl ignorálása
 *.pyo  # Optimalizált Python fájlok
 *.pyd  # C-ből fordított Python modulok
