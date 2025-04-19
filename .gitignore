@@ -10,7 +10,13 @@ build/
 firmware/w5100s-evb-pico/ioLibrary_Driver/build/
 firmware/w5100s-evb-pico/ioLibrary_Driver/
 
-python-lib/__pychache__/*
+python-lib/__pycache__/
+*.pyc  # Összes .pyc fájl ignorálása
+*.pyo  # Optimalizált Python fájlok
+*.pyd  # C-ből fordított Python modulok
+.pytest_cache/  # Pytest cache könyvtár
+*.egg-info/  # Python csomagok metaadatai
+venv/  # Virtuális környezet mappa (vagy más nevű, pl. env/)
 
 # KiCad fájlok
 *.kicad_sch
