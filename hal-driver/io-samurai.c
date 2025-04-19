@@ -40,6 +40,7 @@ typedef struct {
     hal_float_t *analog_in;      // Analóg bemenet
     hal_s32_t *analog_in_s32;    // Analóg bemenet 32 bites egész számként
     hal_float_t *analog_scale;   // Analóg skála
+    hal_bit_t *analog_lowpass; // Analóg aluláteresztő szűrő
     hal_bit_t *analog_rounding;  // Analóg kerekítés
     hal_bit_t *input_data[16];   // 16 bemenet
     hal_bit_t *input_data_not[16]; // 16 bemenet negált értéke
@@ -155,6 +156,18 @@ void udp_io_process_recv(void *arg, long period) {
     }
 }
 
+uint8_t set_bit(uint8_t buffer, int bit_position, int value) {
+    if (bit_position < 0 || bit_position >= 8) {
+        return buffer; // Érvénytelen bit pozíció
+    }
+    if (value) {
+        buffer |= (1 << bit_position); // Bit beállítása
+    } else {
+        buffer &= ~(1 << bit_position); // Bit törlése
+    }
+    return buffer; // Visszaadjuk a módosított bájtot
+}
+
 void udp_io_process_send(void *arg, long period) {
     io_samurai_data_t *d = arg;
 
@@ -167,6 +180,13 @@ void udp_io_process_send(void *arg, long period) {
         tx_buffer[0] |= (*d->output_data[i]) << i;      // output-00 - output-07
         //tx_buffer[1] |= (*output_data[i + 8]) << i;  // output-08 - output-15
     }
+    
+    if (*d->analog_lowpass == 1) {
+        tx_buffer[1] = set_bit(tx_buffer[1], 0, 1);
+    } else {
+        tx_buffer[1] = set_bit(tx_buffer[1], 0, 0);
+    }
+
     checksum_index += tx_buffer[0] + tx_buffer[1] + 1;
     tx_buffer[2] = jump_table[checksum_index];
     sendto(sockfd, tx_buffer, 3, 0, (struct sockaddr*)&remote_addr, sizeof(remote_addr));
@@ -285,6 +305,14 @@ int rtapi_app_main(void) {
         return r;
     }
     *hal_data->analog_rounding = 0; // Kezdeti kerekítés érték
+
+    // Kerekítés pin létrehozása (HAL_OUT)
+    r = hal_pin_bit_newf(HAL_IN, &hal_data->analog_lowpass, comp_id, "io-samurai.analog-lowpass");
+    if (r < 0) {
+        rtapi_print_msg(RTAPI_MSG_ERR, "io-samurai: ERROR: pin analog-rounding export failed with err=%i\n", r);
+        hal_exit(comp_id);
+        return r;
+    }
 
     // Watchdog függvény exportálása
     r = hal_export_funct("io-samurai.watchdog-process", watchdog_process, NULL, 1, 0, comp_id);
