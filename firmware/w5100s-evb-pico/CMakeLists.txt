@@ -1,11 +1,8 @@
 cmake_minimum_required(VERSION 3.12)
 set(PICO_SDK_PATH "$ENV{HOME}/pico-sdk")
-#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0") # Maximális optimalizáció
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
 
-#set(CMAKE_BUILD_TYPE Release) # Release mód
+set(CMAKE_BUILD_TYPE Release) # Release mód
 
-set(CMAKE_BUILD_TYPE Relase)
 add_compile_options(-g -O3)
 
 include(pico_sdk_import.cmake)
@@ -41,15 +38,16 @@ pico_sdk_init()
 
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/ioLibrary_Driver
     ${CMAKE_CURRENT_SOURCE_DIR}/ioLibrary_Driver/Ethernet
     ${CMAKE_CURRENT_SOURCE_DIR}/ioLibrary_Driver/Ethernet/W5100S
 )
 
 add_executable(io-samurai
-    main.c
-    config.c
-    sh1106.c
+    src/main.c
+    src/config.c
+    src/sh1106.c
     ${WIZNET_SOURCES}
 )
 

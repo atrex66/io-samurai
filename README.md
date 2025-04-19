@@ -45,7 +45,7 @@ An open-source, budget-friendly CNC interface for LinuxCNC, featuring 40 MHz SPI
    ```
 
 ## Support
-- **Notes**: I'm putting time and energy into this project, please support me on patreon or buy a ready-made io-samurai card from me.(not required)
+- **Notes**: I'm putting time and energy into this project, please support the project on patreon or buy a ready-made io-samurai card from me.(not required)
 - **Patreon**: Join our community at [patreon](https://www.patreon.com/c/user?u=43314769).
 
 ## License
