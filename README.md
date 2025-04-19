@@ -20,7 +20,6 @@ An open-source, budget-friendly CNC interface for LinuxCNC, featuring 40 MHz SPI
 ### Prerequisites
 - **Hardware**:
   - W5100S-EVB-Pico (~$10).
-  - Raspberry Pi Pico or Pico 2 ($5) + W5500-Lite ($6).
   - 10 kΩ linear potentiometer (B10K) for analog input.
 - **Software**:
   - Pico SDK: `git clone https://github.com/raspberrypi/pico-sdk.git ~/pico-sdk`
