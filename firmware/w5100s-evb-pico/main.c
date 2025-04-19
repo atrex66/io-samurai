@@ -101,8 +101,8 @@ void core1_entry() {
             sh1106_clear();
             // draw output and input bits
             draw_bytes(rx_buffer[0], 0, 0, 0); 
-            draw_bytes(tx_buffer[0], tx_buffer[1], 0, 18); 
             draw_text("0123456789ABCDEF", 0, 9);
+            draw_bytes(tx_buffer[0], tx_buffer[1], 0, 18); 
             sprintf(ip_str, "ADC: %d", (uint16_t)filtered_adc);
             draw_text(ip_str, 0, 32);
             if (checksum_error == 0){
