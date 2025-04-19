@@ -37,7 +37,7 @@ An open-source, budget-friendly CNC interface for LinuxCNC, featuring 40 MHz SPI
 
 2. **Clone the repository and build from source**
    ```bash
-   git clone https://github/atrex66/io-samurai
+   git clone https://github.com/atrex66/io-samurai ~/io-samurai
    cd io-samurai/firmware/w5100s-evb-pico
    mkdir build
    cd build
