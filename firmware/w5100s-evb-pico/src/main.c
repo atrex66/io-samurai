@@ -64,24 +64,6 @@ uint32_t TIMEOUT_US = 100000; // 100 ms = 100000 us
 uint32_t time_diff;
 uint8_t temp_tx_buffer[5] = {0x00, 0x00, 0x00, 0x00, 0x04};
 
-bool i2c_check_address(i2c_inst_t *i2c, uint8_t addr) {
-    uint8_t buffer[1] = {0x00};
-    int ret = i2c_write_blocking(i2c, addr, buffer, 1, false);
-    if (ret >= 0) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-// Low-pass filter function (EMA)
-float low_pass_filter(float new_sample, float previous_filtered, bool *first_sample) {
-    if (*first_sample) {
-        *first_sample = false;
-        return new_sample; // Initialize with first sample
-    }
-    return ALPHA * new_sample + (1.0f - ALPHA) * previous_filtered;
-}
 
 // -------------------------------------------
 // Core 1 Entry Point (I2C, LCD, MCP23017, MCP23008)
@@ -574,4 +556,23 @@ void mcp_write_register(uint8_t i2c_addr, uint8_t reg, uint8_t value) {
         printf("I2C write failed %02X\n", i2c_addr);
         asm("nop");
     }
+}
+
+bool i2c_check_address(i2c_inst_t *i2c, uint8_t addr) {
+    uint8_t buffer[1] = {0x00};
+    int ret = i2c_write_blocking(i2c, addr, buffer, 1, false);
+    if (ret >= 0) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+// Low-pass filter function (EMA)
+float low_pass_filter(float new_sample, float previous_filtered, bool *first_sample) {
+    if (*first_sample) {
+        *first_sample = false;
+        return new_sample; // Initialize with first sample
+    }
+    return ALPHA * new_sample + (1.0f - ALPHA) * previous_filtered;
 }
