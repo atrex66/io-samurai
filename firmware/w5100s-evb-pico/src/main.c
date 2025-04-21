@@ -178,6 +178,7 @@ void core1_entry() {
             checksum_index = 1;
             checksum_index_in = 1;
             timeout_error = 1;
+            checksum_error = 0;
         }
         else {
             timeout_error = 0;
