@@ -181,8 +181,6 @@ void core1_entry() {
 // -------------------------------------------
 int main() {
 
-    net_info = default_net_info;
-
     stdio_init_all();
     stdio_usb_init();
     gpio_init(LED_PIN);
