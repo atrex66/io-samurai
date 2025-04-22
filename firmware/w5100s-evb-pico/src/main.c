@@ -1,11 +1,8 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include "pico/stdlib.h"
 #include "pico/stdio_usb.h"
 #include "pico/multicore.h"
-#include "pico/binary_info.h"
-#include "pico/time.h"
 #include "hardware/spi.h"
 #include "hardware/dma.h"
 #include "hardware/gpio.h"
@@ -16,22 +13,17 @@
 #include "serial_terminal.h"
 #include "wizchip_conf.h"
 #include "socket.h"
-#include "config.h"
 #include "sh1106.h"
 #include "jump_table.h"
 #include "main.h"
+#include "config.h"
 
 // -------------------------------------------
 // Network Configuration
 // -------------------------------------------
-wiz_NetInfo net_info = {
-    .mac = {0x00, 0x08, 0xDC, 0x11, 0x22, 0x33}, // Módosítsd!
-    .ip = {192, 168, 0, 177},
-    .sn = {255, 255, 255, 0},
-    .gw = {192, 168, 0, 1},
-    .dns = {8, 8, 8, 8},
-    .dhcp = NETINFO_STATIC
-};
+extern wiz_NetInfo default_net_info;
+extern uint16_t port;
+wiz_NetInfo net_info;
 
 // -------------------------------------------
 // Globális változók
@@ -47,10 +39,6 @@ static uint dma_rx;
 static dma_channel_config dma_channel_config_tx;
 static dma_channel_config dma_channel_config_rx;
 #endif
-
-// IP cím tárolása uint8_t tömbben
-uint8_t ip_address[4] = {0, 0, 0, 0}; // {192, 168, 0, 177} formátum
-uint16_t port = 8888;
 
 uint8_t src_ip[4];
 uint16_t src_port;
@@ -193,6 +181,8 @@ void core1_entry() {
 // -------------------------------------------
 int main() {
 
+    net_info = default_net_info;
+
     stdio_init_all();
     stdio_usb_init();
     gpio_init(LED_PIN);
@@ -245,8 +235,6 @@ int main() {
     w5100s_interrupt_init();
     printf("W5100S Interrupt Init Done\n");
     network_init();
-    printf("Network Init Done\n");
-    printf("IP: %d.%d.%d.%d\n", net_info.ip[0], net_info.ip[1], net_info.ip[2], net_info.ip[3]);
 
     // Initialize ADC
     adc_init();
@@ -257,14 +245,6 @@ int main() {
 
     // Core1 launch
     multicore_launch_core1(core1_entry);
-
-    // clear the RX and TX buffer
-    setSn_CR(0, Sn_CR_CLOSE);
-    setSn_CR(0, Sn_CR_OPEN);
-
-    // UDP socket create
-    uint8_t sock_num = 0;
-    socket(sock_num, Sn_MR_UDP, UDPPort, 0);
 
     while(1) {
         handle_udp();
@@ -478,8 +458,32 @@ void w5100s_init() {
 // Network Init
 // -------------------------------------------
 void network_init() {
+    wiz_PhyConf phyconf;
+    net_info = default_net_info;
     wizchip_init(0, 0);
     wizchip_setnetinfo(&net_info);
+
+    setSn_CR(0, Sn_CR_CLOSE);
+    setSn_CR(0, Sn_CR_OPEN);
+    // UDP socket create
+    uint8_t sock_num = 0;
+    socket(sock_num, Sn_MR_UDP, port, 0);
+
+    printf("Network Init Done\n");
+    wizchip_getnetinfo(&net_info);
+    wizphy_getphyconf(&phyconf);
+    printf("**************Network Info get****************\n");
+    printf("MAC: %02X:%02X:%02X:%02X:%02X:%02X\n", net_info.mac[0], net_info.mac[1], net_info.mac[2], net_info.mac[3], net_info.mac[4], net_info.mac[5]);
+    printf("IP: %d.%d.%d.%d\n", net_info.ip[0], net_info.ip[1], net_info.ip[2], net_info.ip[3]);
+    printf("Subnet: %d.%d.%d.%d\n", net_info.sn[0], net_info.sn[1], net_info.sn[2], net_info.sn[3]);
+    printf("Gateway: %d.%d.%d.%d\n", net_info.gw[0], net_info.gw[1], net_info.gw[2], net_info.gw[3]);
+    printf("DNS: %d.%d.%d.%d\n", net_info.dns[0], net_info.dns[1], net_info.dns[2], net_info.dns[3]);
+    printf("DHCP: %d   (1-Static, 2-Dinamic)\n", net_info.dhcp);
+    printf("Socket: %d\n", port);
+    printf("*******************PHY status**************\n");
+    printf("PHY Duplex: %s\n", phyconf.duplex == PHY_DUPLEX_FULL ? "Full" : "Half");
+    printf("PHY Speed: %s\n", phyconf.speed == PHY_SPEED_100 ? "100Mbps" : "10Mbps");
+    printf("*******************************************\n");
     }
 
 #ifdef USE_SPI_DMA

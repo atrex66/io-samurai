@@ -41,7 +41,6 @@
 #define core1_running 1
 // Low-pass filter parameters
 #define ALPHA 0.25f // Smoothing factor (0.0 to 1.0, lower = more smoothing)
-#define UDPPort 8888
 
 // -------------------------------------------
 // Globális változók a magok közötti kommunikációhoz

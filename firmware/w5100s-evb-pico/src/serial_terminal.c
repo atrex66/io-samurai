@@ -88,6 +88,24 @@ void process_command(char* command) {
         else {
             printf("Invalid IP format\n");
         }
+    } else if (strncmp(command, "mac ", 4) == 0) {
+        int mac0, mac1, mac2, mac3, mac4, mac5;
+        if (sscanf(command, "mac %x:%x:%x:%x:%x:%x", &mac0, &mac1, &mac2, &mac3, &mac4, &mac5) == 6) {
+            net_info.mac[0] = mac0;
+            net_info.mac[1] = mac1;
+            net_info.mac[2] = mac2;
+            net_info.mac[3] = mac3;
+            net_info.mac[4] = mac4;
+            net_info.mac[5] = mac5;
+            // wizchip_setnetinfo(&net_info);
+            printf("MAC changed to %02X:%02X:%02X:%02X:%02X:%02X\n", mac0, mac1, mac2, mac3, mac4, mac5);
+            printf("Saving to flash, please reboot after save....\n");
+            save_to_flash(&net_info);
+            reset_with_watchdog();
+        }
+        else {
+            printf("Invalid MAC format\n");
+        }
     } else if (strcmp(command, "reset") == 0) {
         reset_with_watchdog();
     } else {

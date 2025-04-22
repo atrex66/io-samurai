@@ -1,27 +1,30 @@
 #include <stdint.h>
 #include "wizchip_conf.h" // W5100S/W5500 könyvtárból
-#include "config.h"
 #include "hardware/flash.h"
 #include "pico/stdlib.h"
 #include "pico/sync.h"
 #include "wizchip_conf.h"
 #include <string.h>
 #include <stdio.h>
+#include "config.h"
 
-// Flash tárolási beállítások
-#define FLASH_TARGET_OFFSET (2097152 - 8192) // Utolsó 8 KB kezdete
-#define FLASH_DATA_SIZE (sizeof(wiz_NetInfo) + 1) // wiz_NetInfo + 1 bájt checksum
-const uint8_t* flash_target_contents = (const uint8_t*)(XIP_BASE + FLASH_TARGET_OFFSET);
-
-// Alapértelmezett hálózati beállítások
+// Default network configuration
 const wiz_NetInfo default_net_info = {
     .mac = {0x00, 0x08, 0xDC, 0x12, 0x34, 0x56},
     .ip = {192, 168, 0, 177},
     .sn = {255, 255, 255, 0},
     .gw = {192, 168, 0, 1},
     .dns = {8, 8, 8, 8},
-    .dhcp = 1 // Statikus IP alapértelmezett
+    .dhcp = 1 // Static IP
 };
+
+// UDP port
+uint16_t port = 8888;
+
+// Flash tárolási beállítások
+#define FLASH_TARGET_OFFSET (2097152 - 8192) // Utolsó 8 KB kezdete
+#define FLASH_DATA_SIZE (sizeof(wiz_NetInfo) + 1) // wiz_NetInfo + 1 bájt checksum
+const uint8_t* flash_target_contents = (const uint8_t*)(XIP_BASE + FLASH_TARGET_OFFSET);
 
 // Checksum kiszámítása (egyszerű összeadás modulo 256)
 static uint8_t calculate_checksum(const wiz_NetInfo* net_info) {
