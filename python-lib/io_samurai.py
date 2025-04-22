@@ -9,7 +9,7 @@ class io_samurai:
         self.pico_ip = pico_ip
         self.port = port
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.sock.bind(("", port))
+        self.sock.bind(("0.0.0.0", port))
         self.sock.settimeout(timeout)
         self.jump_index_out = 1
         self.jump_index_inp = 1
@@ -81,6 +81,7 @@ class io_samurai:
                     self.inputs = (data[3] << 24) | (data[2] << 16) | (data[1] << 8) | data[0]
                     return self.inputs, addr[0]
                 else:
+                    print(f"addr: {addr[0]}")
                     print(f"Buffer: {data[0]:02X} {data[1]:02X} {data[2]:02X} {data[3]:02X} {data[4]:02X}")
                     print(f"Checksum error! Expected {calc_checksum:02X}, got {data[4]:02X}")
                     exit()
