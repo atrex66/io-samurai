@@ -108,7 +108,7 @@ def stop_timer():
 def main():
     global counter, start_time
     try:
-        comm = io_samurai()
+        comm = io_samurai(pico_ip="192.168.0.176", port=8889)
     except Exception as e:
         print(f"Failed to initialize UDP: {e}")
         return

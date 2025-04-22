@@ -56,6 +56,8 @@ typedef struct {
     float filtered_adc; // Szűrt ADC érték
     bool adc_first_sample; // Első minta jelzése az analóg szűrőhöz
     int index;
+    uint8_t checksum_index; // Ellenőrző összeg index
+    uint8_t checksum_index_in; // Ellenőrző összeg index
 } io_samurai_data_t;
 
 static int instances = 0; // Példányok száma
@@ -127,8 +129,8 @@ void watchdog_process(void *arg, long period) {
     if (elapsed > d->watchdog_timeout) {
         if (d->watchdog_expired == 0) {
             rtapi_print_msg(RTAPI_MSG_ERR, "io-samurai.%d: watchdog timeout error, please restart Linuxcnc\n", d->index);
-            checksum_index_in = 1;  // Reset checksum index
-            checksum_index = 1;     // Reset checksum index
+            d->checksum_index_in = 1;  // Reset checksum index
+            d->checksum_index = 1;     // Reset checksum index
         }
         d->watchdog_expired = 1;  // Jelezzük, hogy a watchdog túlfutott
     } else {
@@ -145,8 +147,8 @@ void udp_io_process_recv(void *arg, long period) {
     }
     int len = recvfrom(d->sockfd, d->rx_buffer, 5, 0, NULL, NULL);
     if (len == 5) {
-        checksum_index_in += (uint8_t)(d->rx_buffer[0] + d->rx_buffer[1] + d->rx_buffer[2] + d->rx_buffer[3] + 1);
-        uint8_t calcChecksum = jump_table[checksum_index_in];
+        d->checksum_index_in += (uint8_t)(d->rx_buffer[0] + d->rx_buffer[1] + d->rx_buffer[2] + d->rx_buffer[3] + 1);
+        uint8_t calcChecksum = jump_table[d->checksum_index_in];
         if (calcChecksum == d->rx_buffer[4]) {
             // Érvényes csomag érkezett, connected = 1
             *d->connected = 1;
@@ -210,9 +212,9 @@ void udp_io_process_send(void *arg, long period) {
         d->tx_buffer[1] = set_bit(d->tx_buffer[1], 0, 0);
     }
 
-    checksum_index += d->tx_buffer[0] + d->tx_buffer[1] + 1;
-    d->tx_buffer[2] = jump_table[checksum_index];
-    sendto(d->sockfd, d->tx_buffer, 3, 0, (struct sockaddr*)&d->remote_addr, sizeof(d->remote_addr));
+    d->checksum_index += d->tx_buffer[0] + d->tx_buffer[1] + 1;
+    d->tx_buffer[2] = jump_table[d->checksum_index];
+    sendto(d->sockfd, &d->tx_buffer, 3, 0, (struct sockaddr*)&d->remote_addr, sizeof(d->remote_addr));
     memset(d->tx_buffer, 0, 3);
     if (*d->io_ready_in == 1) {
         *d->io_ready_out = *d->io_ready_in;  // Kapcsolat állapotát jelző pin
@@ -301,6 +303,8 @@ int rtapi_app_main(void) {
         for (int j = 0; j< instances; j++) {
 
             rtapi_print_msg(RTAPI_MSG_INFO, "io-samurai.%d: hal_data allocated at %p\n", j, &hal_data[j]);
+            hal_data[j].checksum_index = 1;
+            hal_data[j].checksum_index_in = 1;
             hal_data[j].index = j; // Store the index for later use
             hal_data[j].adc_first_sample = true; // Initialize the first sample flag
             hal_data[j].watchdog_timeout = 1000; // ~100 ms timeout
