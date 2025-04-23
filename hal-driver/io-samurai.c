@@ -42,6 +42,7 @@ typedef struct {
     hal_bit_t *input_data_not[16]; // 16 bemenet negált értéke
     hal_bit_t *output_data[8];     // 8 kimenet
     hal_bit_t *connected;          // Kapcsolat állapota
+    hal_s32_t *current_tm;         // Aktuális idő
     hal_bit_t *io_ready_in;        // io-ready-in
     hal_bit_t *io_ready_out;       // io-ready-out
     IpPort *ip_address;            // IP cím tárolása
@@ -77,7 +78,7 @@ float analog_scaling(float raw_value, float scale) {
     return (raw_value / ADC_MAX) * scale; // Scale the raw ADC value
 }
 
-static void init_socket(void *arg) {
+static void init_socket(io_samurai_data_t *arg) {
     io_samurai_data_t *d = arg;
 
     if ((d->sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
@@ -107,7 +108,7 @@ static void init_socket(void *arg) {
     
     // Setup remote address
     d->remote_addr.sin_family = AF_INET;
-    d->remote_addr.sin_port = htons(8888);
+    d->remote_addr.sin_port = htons(d->ip_address->port);
     if (inet_pton(AF_INET, d->ip_address->ip, &d->remote_addr.sin_addr) <= 0) {
         rtapi_print_msg(RTAPI_MSG_ERR, "io-samurai.%d: invalid IP address: %s\n",
                        d->index, d->ip_address->ip);
@@ -136,6 +137,7 @@ void watchdog_process(void *arg, long period) {
     } else {
         d->watchdog_expired = 0;  // Nincs túlfutás
     }
+    // *d->current_tm = d->watchdog_expired;  // Frissítjük az eltelt időt
 }
 
 void udp_io_process_recv(void *arg, long period) {
@@ -214,7 +216,7 @@ void udp_io_process_send(void *arg, long period) {
 
     d->checksum_index += d->tx_buffer[0] + d->tx_buffer[1] + 1;
     d->tx_buffer[2] = jump_table[d->checksum_index];
-    sendto(d->sockfd, &d->tx_buffer, 3, 0, (struct sockaddr*)&d->remote_addr, sizeof(d->remote_addr));
+    sendto(d->sockfd, &d->tx_buffer, sizeof(d->tx_buffer), 0, &d->remote_addr, sizeof(d->remote_addr));
     memset(d->tx_buffer, 0, 3);
     if (*d->io_ready_in == 1) {
         *d->io_ready_out = *d->io_ready_in;  // Kapcsolat állapotát jelző pin
@@ -307,7 +309,7 @@ int rtapi_app_main(void) {
             hal_data[j].checksum_index_in = 1;
             hal_data[j].index = j; // Store the index for later use
             hal_data[j].adc_first_sample = true; // Initialize the first sample flag
-            hal_data[j].watchdog_timeout = 1000; // ~100 ms timeout
+            hal_data[j].watchdog_timeout = 10; // ~10 ms timeout
             hal_data[j].current_time = 0; // Initialize the current time
             hal_data[j].last_received_time = 0; // Initialize the last received time
             hal_data[j].watchdog_expired = 0; // Initialize the watchdog expired flag
@@ -444,6 +446,18 @@ int rtapi_app_main(void) {
                 return r;
             }
             *hal_data[j].analog_lowpass = 0; // Kezdeti aluláteresztő szűrő érték
+
+            memchr(name, 0, sizeof(name));
+            snprintf(name, sizeof(name), "io-samurai.%d.elapsed-time", j);
+
+            // Kerekítés pin létrehozása (HAL_OUT)
+            r = hal_pin_s32_newf(HAL_OUT, &hal_data[j].current_tm, comp_id, name, j);
+            if (r < 0) {
+                rtapi_print_msg(RTAPI_MSG_ERR, "io-samurai: ERROR: pin analog-rounding export failed with err=%i\n", r);
+                hal_exit(comp_id);
+                return r;
+            }
+            *hal_data[j].current_tm = 0; // Kezdeti aluláteresztő szűrő érték
 
             // Watchdog függvény exportálása
             char watchdog_name[48] = {0};
