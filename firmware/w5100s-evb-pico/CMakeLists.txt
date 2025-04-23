@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.12)
 set(PICO_SDK_PATH "$ENV{HOME}/pico-sdk")
-set(CMAKE_BUILD_TYPE Debug) # Release mód
+set(CMAKE_BUILD_TYPE Release) # Release mód
 
 include(pico_sdk_import.cmake)
 
