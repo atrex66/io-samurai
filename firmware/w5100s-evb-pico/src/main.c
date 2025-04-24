@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include "pico/stdlib.h"
 #include "pico/stdio_usb.h"
 #include "pico/multicore.h"
@@ -23,6 +24,7 @@
 // -------------------------------------------
 extern wiz_NetInfo default_net_info;
 extern uint16_t port;
+extern configuration_t *flash_config;
 wiz_NetInfo net_info;
 
 // -------------------------------------------
@@ -59,6 +61,8 @@ uint8_t temp_tx_buffer[5] = {0x00, 0x00, 0x00, 0x00, 0x04};
 void core1_entry() {
     uint16_t result;
     uint8_t conf;
+    bool MCP23008_present = false;
+    bool MCP23017_present = false;
      // Initialize filter variables
     float filtered_adc = 0.0f;
     bool first_sample = true;
@@ -66,26 +70,41 @@ void core1_entry() {
     bool lcd = false;
     i2c_setup();
     sleep_ms(100);
-    printf("Detecting SH1106 on %#x address\n", SH1106_ADDR);
+    printf("Detecting SH1106 (OLED display) on %#x address\n", SH1106_ADDR);
     lcd = i2c_check_address(i2c1, SH1106_ADDR);
     if (lcd) {
-        printf("SH1106 Init\n");
+        printf("SH1106 Init (OLED)\n");
         sh1106_init();    
     }
     else {
-        printf("No SH1106 found on %#x address.\n", SH1106_ADDR);
+        printf("No SH1106 (OLED display) found on %#x address.\n", SH1106_ADDR);
     }
 
 #ifdef MCP23008_ADDR
-    printf("MCP23008 Init\n");
-    mcp_write_register(MCP23008_ADDR, 0x00, 0x00); // IODIR = 0xFF (Inputs)
+    printf("Detecting MCP23008 (Outputs) on %#x address\n", MCP23008_ADDR);
+    if (i2c_check_address(i2c1, MCP23008_ADDR)) {
+        MCP23008_present = true;
+        printf("MCP23008 (Outputs) Init\n");
+        mcp_write_register(MCP23008_ADDR, 0x00, 0x00); // IODIR = 0xFF (Inputs)
+    }
+    else {
+        printf("No MCP23008 (Outputs) found on %#x address.\n", MCP23008_ADDR);
+    }
+
 #endif
 
     // beallitjuk az MCP23017-et bemenetnek
 #ifdef MCP23017_ADDR
-    printf("MCP23017 Init\n");
-    mcp_write_register(MCP23017_ADDR, 0x00, 0xff);   // GPIO-A Input
-    mcp_write_register(MCP23017_ADDR, 0x01, 0xff);   // GPIO-B Input
+    printf("Detecting MCP23017 (Inputs) on %#x address\n", MCP23017_ADDR);
+    if (i2c_check_address(i2c1, MCP23017_ADDR)) {
+        MCP23017_present = true;
+        printf("MCP23017 (Inputs) Init\n");
+        mcp_write_register(MCP23017_ADDR, 0x00, 0xff);   // GPIO-A Input
+        mcp_write_register(MCP23017_ADDR, 0x01, 0xff);   // GPIO-B Input
+    }
+    else {
+        printf("No MCP23017 (Inputs) found on %#x address.\n", MCP23017_ADDR);
+    }
 #endif
 
     printf("Ready...\n");
@@ -107,7 +126,6 @@ void core1_entry() {
 #endif
 
         result = adc_read();
-        // Convert to voltage (3.3V reference)
         float voltage = (float) result;
 
         // Apply low-pass filter
@@ -115,7 +133,7 @@ void core1_entry() {
             filtered_adc = low_pass_filter(voltage, filtered_adc, &first_sample);
         }
         else {
-            filtered_adc = voltage;
+            filtered_adc = result;
         }
         
 
@@ -125,8 +143,12 @@ void core1_entry() {
         temp_tx_buffer[1] = mcp_read_register(MCP23017_ADDR, 0x12); // beolvassuk az MCP23017 GPIO-A portrol az felso input sort 8-15
         temp_tx_buffer[2] = (uint16_t)filtered_adc & 0xFF; // lower byte of ADC
         temp_tx_buffer[3] = (uint16_t)filtered_adc >> 8; // upper byte of ADC
+        temp_tx_buffer[3] |= MCP23008_present ? 0x80 : 0x00; // set the first bit to 1 if MCP23008 is present
+        temp_tx_buffer[3] |= MCP23017_present ? 0x40 : 0x00; // set the second bit to 1 if MCP23017 is present
+        temp_tx_buffer[3] |= lcd ? 0x20 : 0x00; // set the third bit to 1 if SH1106 OLED is present
 
 #endif
+
         // when oled connected (this slows down the program so use only when needed)
         if (lcd){
             char ip_str[16]; // this holds the IP address
@@ -161,12 +183,14 @@ void core1_entry() {
             }
             sh1106_update();
             }
+
         // Check for timeout
         if (time_diff > TIMEOUT_US) {
             checksum_index = 1;
             checksum_index_in = 1;
             timeout_error = 1;
             checksum_error = 0;
+            src_ip[0] = 0;
         }
         else {
             timeout_error = 0;
@@ -176,10 +200,26 @@ void core1_entry() {
         }
 }
 
+void load_configuration(){
+    flash_config = (configuration_t *)malloc(sizeof(configuration_t));
+    load_config_from_flash(flash_config);
+    memcpy(net_info.mac, flash_config->mac, 6);
+    memcpy(net_info.ip, flash_config->ip, 4);
+    memcpy(net_info.sn, flash_config->sn, 4);
+    memcpy(net_info.gw, flash_config->gw, 4);
+    memcpy(net_info.dns, flash_config->dns, 4);
+    net_info.dhcp = flash_config->dhcp;
+    port = flash_config->port;
+    TIMEOUT_US = flash_config->timeout;
+}
+
+
 // -------------------------------------------
 // (Core 0) UDP communication (DMA, SPI)
 // -------------------------------------------
 int main() {
+
+    // clear_flash();
 
     stdio_init_all();
     stdio_usb_init();
@@ -188,7 +228,8 @@ int main() {
    
     sleep_ms(2000);
 
-    rx_buffer[2] = jump_table[1]; // initial checksum
+  
+    //rx_buffer[2] = jump_table[1]; // initial checksum
 
     printf("\033[2J"); // ANSI escape kód a képernyő törléséhez
     printf("\033[H");  // kurzor vissza az elejére (0,0 pozíció)
@@ -204,8 +245,6 @@ int main() {
                     CLOCKS_CLK_PERI_CTRL_AUXSRC_VALUE_CLK_SYS,
                     clock_get_hz(clk_sys),
                     clock_get_hz(clk_sys));
-
-    load_from_flash(&net_info);
 
     // SPI 40 MHz
     spi_init(spi0, 40000000);
@@ -232,6 +271,9 @@ int main() {
     printf("W5100S Init Done\n");
     w5100s_interrupt_init();
     printf("W5100S Interrupt Init Done\n");
+  
+    // load configuration from flash
+    load_configuration();
     network_init();
 
     // Initialize ADC
@@ -457,7 +499,9 @@ void w5100s_init() {
 // -------------------------------------------
 void network_init() {
     wiz_PhyConf phyconf;
-    net_info = default_net_info;
+
+
+    printf("Network Init Start\n");
     wizchip_init(0, 0);
     wizchip_setnetinfo(&net_info);
 
@@ -470,14 +514,14 @@ void network_init() {
     printf("Network Init Done\n");
     wizchip_getnetinfo(&net_info);
     wizphy_getphyconf(&phyconf);
-    printf("**************Network Info get****************\n");
+    printf("**************Network Info read from W5100S\n");
     printf("MAC: %02X:%02X:%02X:%02X:%02X:%02X\n", net_info.mac[0], net_info.mac[1], net_info.mac[2], net_info.mac[3], net_info.mac[4], net_info.mac[5]);
     printf("IP: %d.%d.%d.%d\n", net_info.ip[0], net_info.ip[1], net_info.ip[2], net_info.ip[3]);
     printf("Subnet: %d.%d.%d.%d\n", net_info.sn[0], net_info.sn[1], net_info.sn[2], net_info.sn[3]);
     printf("Gateway: %d.%d.%d.%d\n", net_info.gw[0], net_info.gw[1], net_info.gw[2], net_info.gw[3]);
     printf("DNS: %d.%d.%d.%d\n", net_info.dns[0], net_info.dns[1], net_info.dns[2], net_info.dns[3]);
     printf("DHCP: %d   (1-Static, 2-Dinamic)\n", net_info.dhcp);
-    printf("Socket: %d\n", port);
+    printf("PORT: %d\n", port);
     printf("*******************PHY status**************\n");
     printf("PHY Duplex: %s\n", phyconf.duplex == PHY_DUPLEX_FULL ? "Full" : "Half");
     printf("PHY Speed: %s\n", phyconf.speed == PHY_SPEED_100 ? "100Mbps" : "10Mbps");
@@ -563,8 +607,8 @@ void mcp_write_register(uint8_t i2c_addr, uint8_t reg, uint8_t value) {
 
 bool i2c_check_address(i2c_inst_t *i2c, uint8_t addr) {
     uint8_t buffer[1] = {0x00};
-    int ret = i2c_write_blocking(i2c, addr, buffer, 1, false);
-    if (ret >= 0) {
+    int ret = i2c_write_blocking_until(i2c, addr, buffer, 1, false, make_timeout_time_us(1000));
+    if (ret != PICO_ERROR_GENERIC) {
         return true;
     } else {
         return false;
