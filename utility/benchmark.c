@@ -11,8 +11,6 @@
 #include "jump_table.h"
 #include <arpa/inet.h>
 
-#define UDP_IP "192.168.0.177"
-#define UDP_PORT 8888
 #define NUM_CYCLES 100000
 #define SEND_PACKET_SIZE 3
 #define RECV_PACKET_SIZE 5
@@ -20,9 +18,10 @@
 
 static int sockfd;
 static struct sockaddr_in local_addr, remote_addr;
-char *ip_addr = "192.168.0.177";
+char *ip_addr = "192.168.0.178";
+uint16_t port = 8888;
 uint8_t counter = 0;
-char send_buffer[SEND_PACKET_SIZE] = {0x00, 0x00, 0x04};
+char send_buffer[SEND_PACKET_SIZE] = {0x00,};
 
 long long get_time_ms() {
     struct timeval tv;
@@ -33,15 +32,15 @@ long long get_time_ms() {
 static void init_socket(void) {
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     local_addr.sin_family = AF_INET;
-    local_addr.sin_port = htons(8888);
+    local_addr.sin_port = htons(port);
     local_addr.sin_addr.s_addr = INADDR_ANY;
     bind(sockfd, (struct sockaddr*)&local_addr, sizeof(local_addr));
 
-    //int flags = fcntl(sockfd, F_GETFL, 0);
-    //fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
+    int flags = fcntl(sockfd, F_GETFL, 0);
+    fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
 
     remote_addr.sin_family = AF_INET;
-    remote_addr.sin_port = htons(8888);
+    remote_addr.sin_port = htons(port);
     inet_pton(AF_INET, ip_addr, &remote_addr.sin_addr);
 }
 
@@ -63,7 +62,7 @@ int main() {
     }
 
     init_socket();
-    printf("UDP socket created (%s:8888), connected to target.\n", ip_addr);
+    printf("UDP socket created (%s:%d), connected to target.\n", ip_addr, port);
 
     // Benchmark loop
     start_time = get_time_ms();
@@ -73,8 +72,12 @@ int main() {
     for (int i = 0; i < NUM_CYCLES; i++) {
         long long cycle_start = get_time_ms();
         counter ++;
-        send_buffer[0] = counter;
-        send_buffer[1] = 255 - counter;
+        // DO NOT MODIFY THE DATA IF THE CARD IS CONNECTED TO YOUR MACHINE
+        // DO NOT MODIFY THE DATA IF THE CARD IS CONNECTED TO YOUR MACHINE
+        send_buffer[0] = 0;
+        send_buffer[1] = 0;
+        // DO NOT MODIFY THE DATA IF THE CARD IS CONNECTED TO YOUR MACHINE
+        // DO NOT MODIFY THE DATA IF THE CARD IS CONNECTED TO YOUR MACHINE
         jump_table_checksum_in();
         // Send packet
         if (sendto(sockfd, send_buffer, SEND_PACKET_SIZE, 0, (struct sockaddr*)&remote_addr, sizeof(remote_addr)) < 0) {
