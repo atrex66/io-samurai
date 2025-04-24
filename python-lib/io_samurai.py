@@ -119,7 +119,7 @@ class io_samurai:
 
     def get_analog_input(self):
         lower_byte = self.inputs>> 16 & 0xFF
-        upper_byte = (self.inputs >> 24) & 0xFF
+        upper_byte = (self.inputs >> 24) & 0x1F
         # Az alsó és felső bájtok összevonása
         adc_value = (upper_byte << 8) | lower_byte
         # Az ADC érték skálázása a self.analog_scale alapján
