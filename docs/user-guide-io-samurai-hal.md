@@ -5,9 +5,9 @@ The `io-samurai` component is a Hardware Abstraction Layer (HAL) driver for the 
 ## Overview
 
 The `io-samurai` component:
-- Communicates via UDP on port 8888 with a configurable IP address.
-- Supports 16 digital inputs, 8 digital outputs, and 1 analog input.
-- Includes a watchdog mechanism to detect communication timeouts.
+- Communicates via UDP with multiple io-samurai with configurable IP address and port (loadrt io-samurai ip_address="192.168.0.177:8888;192.168.0.178:8889").
+- Supports 16 digital inputs, 8 digital outputs, and 1 analog input per card.
+- Includes a watchdog mechanism to detect communication timeouts both the driver and io-samurai side.
 - Provides low-pass filtering and scaling for the analog input.
 - Integrates with LinuxCNC's HAL for real-time I/O processing.
 
@@ -30,9 +30,14 @@ The `io-samurai` component:
   - **Description**: Provides the same analog input value as `analog-in`, but cast to a 32-bit integer. This is useful for applications requiring integer values or for overriding floating-point behavior in certain LinuxCNC configurations.
 
 ### Analog Parameters
-- **Pin Name**: `io-samurai.analog-scale` (HAL_IN, float)
-  - **Description**: Defines the scaling factor for the analog input. The raw ADC value (0–4095) is divided by the maximum ADC value (4095) and multiplied by this scale to produce the `analog-in` value. Default value is 1.0.
-  - **Example**: If `analog-scale` is set to 5.0, a raw ADC value of 4095 results in an `analog-in` value of 5.0.
+- **Pin Name**: `io-samurai.analog-min` (HAL_IN, float)
+  - **Description**: Defines the minimum value for the analog input.
+  - **Example**: If `analog-min` is set to -5.0, when the ADC value on the io-samurai reaches 0 the analog-in value in the driver side is set to -5.0.
+- **Pin Name**: `io-samurai.analog-max` (HAL_IN, float)
+  - **Description**: Defines the maximum value for the analog input.
+  - **Example**: Same like the `analog-min` but for the positive side
+- **Full Example**: If you want the `analog-in` in 0-10000 range set the `analog-min` to 0 and the `analog-max` to 10000
+
 - **Pin Name**: `io-samurai.analog-rounding` (HAL_IN, bit)
   - **Description**: Controls whether the scaled analog input value is rounded to the nearest integer before being assigned to `analog-in` and `analog-in-s32`. If set to 1, rounding is enabled; if 0, the value remains a floating-point number. Default is 0 (no rounding).
   - **Use Case**: Rounding is useful when precise integer values are needed for control logic or to avoid floating-point precision issues.

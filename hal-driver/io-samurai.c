@@ -15,8 +15,8 @@
 
 /* module information */
 MODULE_AUTHOR("Viola Zsolt");
-MODULE_DESCRIPTION("IO Samurai UDP driver");
-MODULE_LICENSE("GPL");
+MODULE_DESCRIPTION("IO Samurai V1.0 driver");
+MODULE_LICENSE("MIT");
 
 // to parse the modparam
 char *ip_address[128] = {0,};
@@ -35,7 +35,8 @@ typedef struct {
 typedef struct {
     hal_float_t *analog_in;        // Analóg bemenet
     hal_s32_t *analog_in_s32;      // Analóg bemenet 32 bites egész számként
-    hal_float_t *analog_scale;     // Analóg skála
+    hal_float_t *analog_min;       // Analóg skála negativ értéke
+    hal_float_t *analog_max;       // Analóg skála pozitiv értéke
     hal_bit_t *analog_lowpass;     // Analóg aluláteresztő szűrő
     hal_bit_t *analog_rounding;    // Analóg kerekítés
     hal_bit_t *input_data[16];     // 16 bemenet
@@ -54,8 +55,6 @@ typedef struct {
     long long watchdog_timeout;  // 100 ms timeout
     int watchdog_expired;  // Watchdog túlfutás jelzése (0: nem futott túl, 1: túlfutott)
     long long current_time;  // Globális változó az időzítéshez
-    float filtered_adc; // Szűrt ADC érték
-    bool adc_first_sample; // Első minta jelzése az analóg szűrőhöz
     int index;
     uint8_t checksum_index; // Ellenőrző összeg index
     uint8_t checksum_index_in; // Ellenőrző összeg index
@@ -74,8 +73,17 @@ float low_pass_filter(float new_sample, float previous_filtered, bool *first_sam
     return ALPHA * new_sample + (1.0f - ALPHA) * previous_filtered;
 }
 
-float analog_scaling(float raw_value, float scale) {
-    return (raw_value / ADC_MAX) * scale; // Scale the raw ADC value
+// Analóg bemenet skálázása
+float scale_adc(uint16_t adc_in, float min_value, float max_value) {
+    // Ellenőrizzük, hogy az adc_in ne legyen kívül az érvényes tartományon
+    if (adc_in < 0) adc_in = 0;
+    if (adc_in > ADC_MAX) adc_in = ADC_MAX;
+
+    // Lineáris skálázás: (adc_in / ADC_MAX) * (max_value - min_value) + min_value
+    float ratio = (float)adc_in / ADC_MAX;
+    float result = ratio * (max_value - min_value) + min_value;
+
+    return result;
 }
 
 static void init_socket(io_samurai_data_t *arg) {
@@ -162,10 +170,8 @@ void udp_io_process_recv(void *arg, long period) {
                 *d->input_data_not[i + 8] = 1 - *d->input_data[i + 8]; // input-08 - input-15 negált érték
             }
             // Analóg bemenet feldolgozása (rx_buffer[2] alsó 8 bit, rx_buffer[3] felső 8 bit)
-            uint16_t raw_adc = (d->rx_buffer[3] << 8) | d->rx_buffer[2]; // 16 bites érték
-            float voltage = (float)raw_adc;
-            d->filtered_adc = low_pass_filter(voltage, d->filtered_adc, &d->adc_first_sample);
-            float scaled_adc = analog_scaling(d->filtered_adc, *d->analog_scale); // Szűrés
+            uint16_t raw_adc = (d->rx_buffer[3] << 8 | d->rx_buffer[2]) & 0xfff; // 12 bites érték
+            float scaled_adc = scale_adc(raw_adc, *d->analog_min, *d->analog_max); // Szűrés
             if (*d->analog_rounding == 1) {
                 scaled_adc = roundf(scaled_adc); // Kerekítés
             }
@@ -307,12 +313,10 @@ int rtapi_app_main(void) {
             hal_data[j].checksum_index = 1;
             hal_data[j].checksum_index_in = 1;
             hal_data[j].index = j; // Store the index for later use
-            hal_data[j].adc_first_sample = true; // Initialize the first sample flag
             hal_data[j].watchdog_timeout = 10; // ~10 ms timeout
             hal_data[j].current_time = 0; // Initialize the current time
             hal_data[j].last_received_time = 0; // Initialize the last received time
             hal_data[j].watchdog_expired = 0; // Initialize the watchdog expired flag
-            hal_data[j].filtered_adc = 0.0f; // Initialize the filtered ADC value
 
             hal_data[j].ip_address = &results[j];
 
@@ -412,15 +416,26 @@ int rtapi_app_main(void) {
             }
 
             memchr(name, 0, sizeof(name));
-            snprintf(name, sizeof(name), "io-samurai.%d.analog-scale", j);
+            snprintf(name, sizeof(name), "io-samurai.%d.analog-min", j);
 
-            r = hal_pin_float_newf(HAL_IN, &hal_data[j].analog_scale, comp_id, name, j);
+            r = hal_pin_float_newf(HAL_IN, &hal_data[j].analog_min, comp_id, name, j);
             if (r < 0) {
                 rtapi_print_msg(RTAPI_MSG_ERR, "io-samurai: ERROR: pin analog-in export failed with err=%i\n", r);
                 hal_exit(comp_id);
                 return r;
             }
-            *hal_data[j].analog_scale = 1.0f; // Kezdeti skála érték
+            *hal_data[j].analog_min = 0.0f; // Kezdeti skála érték
+
+            memchr(name, 0, sizeof(name));
+            snprintf(name, sizeof(name), "io-samurai.%d.analog-max", j);
+
+            r = hal_pin_float_newf(HAL_IN, &hal_data[j].analog_max, comp_id, name, j);
+            if (r < 0) {
+                rtapi_print_msg(RTAPI_MSG_ERR, "io-samurai: ERROR: pin analog-in export failed with err=%i\n", r);
+                hal_exit(comp_id);
+                return r;
+            }
+            *hal_data[j].analog_max = 1.0f; // Kezdeti skála érték
 
             memchr(name, 0, sizeof(name));
             snprintf(name, sizeof(name), "io-samurai.%d.analog-rounding", j);
