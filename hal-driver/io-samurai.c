@@ -277,14 +277,13 @@ int rtapi_app_main(void) {
     rtapi_set_msg_level(RTAPI_MSG_INFO);
 
         IpPort results[8];
-        int num_entries = parse_ip_port((char *)ip_address[0], results, 8);
-        instances = num_entries;
+        instances = parse_ip_port((char *)ip_address[0], results, 8);
 
-        for (int i = 0; i < num_entries; i++) {
+        for (int i = 0; i < instances; i++) {
             rtapi_print_msg(RTAPI_MSG_INFO, "Parsed IP: %s, Port: %d\n", results[i].ip, results[i].port);
         }
 
-        if (num_entries > MAX_CHAN) {
+        if (instances > MAX_CHAN) {
             rtapi_print_msg(RTAPI_MSG_ERR, "io-samurai: Too many channels, max %d allowed\n", MAX_CHAN);
             return -1;
         }
