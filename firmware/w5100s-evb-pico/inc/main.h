@@ -67,6 +67,8 @@ uint8_t xor_checksum(const uint8_t *data, uint8_t len);
 void core1_entry();
 bool i2c_check_address(i2c_inst_t *i2c, uint8_t addr);
 float low_pass_filter(float new_sample, float previous_filtered, bool *first_sample);
+uint16_t adc_scale(uint16_t adc_in);
+float scale_value(uint16_t x);
 
 #if USE_SPI_DMA
 static void wizchip_write_burst(uint8_t *pBuf, uint16_t len);

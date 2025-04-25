@@ -53,6 +53,10 @@ add_executable(io-samurai
     ${WIZNET_SOURCES}
 )
 
+# need to program the flash
+#pico_set_binary_type(io-samurai copy_to_ram)
+#pico_set_binary_type(io-samurai no_flash)
+
 target_include_directories(io-samurai PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/ioLibrary_Driver
     ${CMAKE_CURRENT_SOURCE_DIR}/inc
@@ -73,6 +77,7 @@ target_link_libraries(io-samurai
     hardware_i2c
     hardware_adc
 )
+
 
 target_compile_options(io-samurai PRIVATE)
 pico_add_extra_outputs(io-samurai)

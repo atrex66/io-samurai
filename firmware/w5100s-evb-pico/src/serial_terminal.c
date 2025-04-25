@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include "wizchip_conf.h"
 #include "pico/stdio_usb.h"
 #include "pico/stdlib.h"
@@ -14,11 +15,12 @@ extern configuration_t *flash_config;
 extern uint16_t port;
 extern void reset_with_watchdog();
 extern uint8_t src_ip[4];
+extern uint16_t adc_min;
+extern uint16_t adc_max;
 
 bool enable_serial = true;
 
 void save_configuration(){
-    printf("setting configuration...\n");
     flash_config->dhcp = net_info.dhcp;
     memcpy(flash_config->mac, &net_info.mac, 6);
     memcpy(flash_config->ip, &net_info.ip, 4);
@@ -27,7 +29,23 @@ void save_configuration(){
     memcpy(flash_config->dns, &net_info.dns, 4);
     flash_config->port = port;
     flash_config->timeout = TIMEOUT_US;
-    printf("configuration set.\n");
+    flash_config->adc_min = adc_min;
+    flash_config->adc_max = adc_max;
+}
+
+void load_configuration(){
+    flash_config = (configuration_t *)malloc(sizeof(configuration_t));
+    load_config_from_flash(flash_config);
+    memcpy(net_info.mac, flash_config->mac, 6);
+    memcpy(net_info.ip, flash_config->ip, 4);
+    memcpy(net_info.sn, flash_config->sn, 4);
+    memcpy(net_info.gw, flash_config->gw, 4);
+    memcpy(net_info.dns, flash_config->dns, 4);
+    net_info.dhcp = flash_config->dhcp;
+    port = flash_config->port;
+    TIMEOUT_US = flash_config->timeout;
+    adc_min = flash_config->adc_min;
+    adc_max = flash_config->adc_max;
 }
 
 // process the command, and print the result (ip, ip x.x.x.x)
@@ -40,6 +58,8 @@ void process_command(char* command) {
         printf("port <port> - Set port\n");
         printf("mac <xx:xx:xx:xx:xx:xx> - Set MAC address\n");
         printf("timeout <value> - Set timeout in microseconds\n");
+        printf("adc-min <value> - Set ADC minimum value\n");
+        printf("adc-max <value> - Set ADC maximum value\n");
         printf("defaults - Restore default configuration\n");
         printf("reset - Reset the device\n");
         printf("save - Save configuration to flash\n");
@@ -48,9 +68,8 @@ void process_command(char* command) {
         return;
     }
     else if (strcmp(command, "save") == 0) {
+        save_configuration();
         save_config_to_flash();
-        printf("Configuration saved to flash.\n");
-        printf("Please reboot the device to apply changes.\n");
     }
     else if (strcmp(command, "check") == 0) {
         printf("\n");
@@ -63,7 +82,8 @@ void process_command(char* command) {
         printf("DHCP: %d   (1-Static, 2-Dinamic)\n", net_info.dhcp);
         printf("PORT: %d\n", port);
         printf("Timeout: %d\n", TIMEOUT_US);
-        printf("\n");
+        printf("ADC min: %d\n", adc_min);
+        printf("ADC max: %d\n", adc_max);
         printf("Ready.\n");
     }
     else if (strcmp(command, "reboot") == 0) {
@@ -95,7 +115,29 @@ void process_command(char* command) {
             printf("Invalid timeout format\n");
         }
     }
-    else if (strncmp(command, "port ", 5) == 0) {
+    else if (strncmp(command, "adc-min ", 8) == 0) {
+        uint16_t minimum;
+        if (sscanf(command, "adc-min %d", &minimum) == 1) {
+            adc_min = minimum;
+            save_configuration();
+            printf("Adc-minimum changed to %d\n", minimum);
+        }
+        else {
+            printf("Invalid adc-minimum format\n");
+        }
+    }
+    else if (strncmp(command, "adc-max ", 8) == 0) {
+        uint16_t maximum;
+        if (sscanf(command, "adc-max %d", &maximum) == 1) {
+            adc_max = maximum;
+            save_configuration();
+            printf("Adc-maximum changed to %d\n", maximum);
+        }
+        else {
+            printf("Invalid adc-maximum format\n");
+        }
+    }
+     else if (strncmp(command, "port ", 5) == 0) {
         int new_port;
         if (sscanf(command, "port %d", &new_port) == 1) {
             port = new_port;

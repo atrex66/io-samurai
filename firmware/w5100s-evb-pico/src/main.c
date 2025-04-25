@@ -19,12 +19,31 @@
 #include "main.h"
 #include "config.h"
 
+// Author:Viola Zsolt (atrex66@gmail.com)
+// Date: 2025
+// Description: IO-Samurai V1.0 driver for Raspberry Pi Pico + W5100S (W5100S-EVB-PICO)
+// License: MIT
+// Description: This code is a driver for the IO-Samurai V1.0 board, which uses a Raspberry Pi Pico and a W5100S Ethernet chip.
+// It also includes a serial terminal interface for configuration and debugging.
+// The code is designed to run on the Raspberry Pi Pico and uses the Pico SDK for hardware access.
+// The code is structured to run on two cores, with core 0 handling network communication and core 1 handling GPIO, ADC, Oled and terminal config.
+// The code is using DMA for SPI (burst) communication with the W5100S chip, which allows for high-speed data transfer.
+// do not chase errors in the local network when the W5100S only run in 10Mbit/s mode, it's not necessary higher data rate, the driver capable over 6000 reads+writes per second (utitlity/benchmark.c).
+// The code uses the Wiznet W5100S library for network communication.
+// The code includes functions for initializing the hardware, handling network communication, and processing commands from the serial terminal.
+// The code is designed to be modular and extensible, allowing for easy addition of new features and functionality.
+// The code is also designed to be efficient and responsive, with low latency and high throughput.
+// Note: checksum algorithm is used to ensure data integrity, and the code includes error handling for network communication. (timeout + jumpcode checksum)
+// Note: The code is disables the terminal when the HAL driver connect to the io-samurai board, and enables when not running.
+
 // -------------------------------------------
 // Network Configuration
 // -------------------------------------------
 extern wiz_NetInfo default_net_info;
 extern uint16_t port;
 extern configuration_t *flash_config;
+extern uint16_t adc_min;
+extern uint16_t adc_max;
 wiz_NetInfo net_info;
 
 // -------------------------------------------
@@ -59,7 +78,7 @@ uint8_t temp_tx_buffer[5] = {0x00, 0x00, 0x00, 0x00, 0x04};
 // Core 1 Entry Point (I2C, LCD, MCP23017, MCP23008)
 // -------------------------------------------
 void core1_entry() {
-    uint16_t result;
+    int16_t result;
     uint8_t conf;
     bool MCP23008_present = false;
     bool MCP23017_present = false;
@@ -68,6 +87,7 @@ void core1_entry() {
     bool first_sample = true;
 
     bool lcd = false;
+
     i2c_setup();
     sleep_ms(100);
     printf("Detecting SH1106 (OLED display) on %#x address\n", SH1106_ADDR);
@@ -125,7 +145,7 @@ void core1_entry() {
         }
 #endif
 
-        result = adc_read();
+        result = scale_value(adc_read());
         float voltage = (float) result;
 
         // Apply low-pass filter
@@ -200,19 +220,20 @@ void core1_entry() {
         }
 }
 
-void load_configuration(){
-    flash_config = (configuration_t *)malloc(sizeof(configuration_t));
-    load_config_from_flash(flash_config);
-    memcpy(net_info.mac, flash_config->mac, 6);
-    memcpy(net_info.ip, flash_config->ip, 4);
-    memcpy(net_info.sn, flash_config->sn, 4);
-    memcpy(net_info.gw, flash_config->gw, 4);
-    memcpy(net_info.dns, flash_config->dns, 4);
-    net_info.dhcp = flash_config->dhcp;
-    port = flash_config->port;
-    TIMEOUT_US = flash_config->timeout;
+void run_from_ram(){
+    // This function is called from RAM
+    // You can add your code here
+    printf("Running from RAM\n");
 }
 
+void call_function_ram(void *func) {
+    void *f;
+    f = (void *)malloc(sizeof(func));
+    memcpy(f, &func, sizeof(func));
+    // Call the function
+    void (*function_ptr)() = (void (*)())f;
+    function_ptr();
+}
 
 // -------------------------------------------
 // (Core 0) UDP communication (DMA, SPI)
@@ -228,14 +249,14 @@ int main() {
    
     sleep_ms(2000);
 
-  
-    //rx_buffer[2] = jump_table[1]; // initial checksum
 
     printf("\033[2J"); // ANSI escape kód a képernyő törléséhez
     printf("\033[H");  // kurzor vissza az elejére (0,0 pozíció)
     
-    printf("\n\n--- W5100S Init Start ---\n");
-
+    printf("\n\n--- IO-Samurai V1.0 ---\n");
+    printf("Viola Zsolt 2025\n");
+    printf("E-mail:atrex66@gmail.com\n");
+    printf("\n");
     // SYSCLK beállítása 160 MHz-re
     set_sys_clock_khz(125000, true);
     
@@ -272,10 +293,6 @@ int main() {
     w5100s_interrupt_init();
     printf("W5100S Interrupt Init Done\n");
   
-    // load configuration from flash
-    load_configuration();
-    network_init();
-
     // Initialize ADC
     adc_init();
 
@@ -283,13 +300,15 @@ int main() {
     adc_gpio_init(26); // Configures GPIO26 for ADC use
     adc_select_input(0); // Select ADC input 0 (maps to GPIO26)
 
+    // load configuration from flash
+    load_configuration();
+    network_init();
+
     // Core1 launch
     multicore_launch_core1(core1_entry);
 
-    while(1) {
-        handle_udp();
-        asm volatile("" ::: "memory");
-        }
+    // Main loop for core0
+    handle_udp();
 }
 
 void reset_with_watchdog() {
@@ -319,7 +338,7 @@ void __time_critical_func(spi_write)(uint8_t data) {
     spi_write_blocking(SPI_PORT, &data, 1);
 }
 
-int32_t _sendto(uint8_t sn, uint8_t *buf, uint16_t len, uint8_t *addr, uint16_t port) {
+int32_t __time_critical_func(_sendto)(uint8_t sn, uint8_t *buf, uint16_t len, uint8_t *addr, uint16_t port) {
     uint16_t freesize;
     uint32_t taddr;
 
@@ -349,7 +368,7 @@ int32_t _sendto(uint8_t sn, uint8_t *buf, uint16_t len, uint8_t *addr, uint16_t 
     return (int32_t)len;  // Sikeresen elküldött adatok hossza
 }
 
-int32_t _recvfrom(uint8_t sn, uint8_t *buf, uint16_t len, uint8_t *addr, uint16_t *port) {
+int32_t __time_critical_func(_recvfrom)(uint8_t sn, uint8_t *buf, uint16_t len, uint8_t *addr, uint16_t *port) {
     uint8_t head[8];  // UDP fejléc: 8 bájt (IP + port + hossz)
     uint16_t pack_len = 0;
 
@@ -393,7 +412,7 @@ void __time_critical_func(calculate_checksum)(uint8_t *data, uint8_t len) {
     data[len] = sum;
 }
 
-void jump_table_checksum() {
+void __time_critical_func(jump_table_checksum)() {
     if (checksum_error == 0) {
         checksum_index += (uint8_t)(rx_buffer[0] + rx_buffer[1] + 1);
         uint8_t checksum = jump_table[checksum_index];
@@ -404,31 +423,64 @@ void jump_table_checksum() {
     }
 }
 
-void jump_table_checksum_in() {
+void __time_critical_func(jump_table_checksum_in)() {
     checksum_index_in += (uint8_t)(tx_buffer[0] + tx_buffer[1] + tx_buffer[2] + tx_buffer[3] + 1);
     tx_buffer[4] = jump_table[checksum_index_in];
+}
+
+
+// RAM-ban futó függvény, amit a core0 futtat az írás alatt
+void __not_in_flash_func(core0_wait)(void) {
+    // Jelzés a core1-nek, hogy készen állunk
+    multicore_fifo_push_blocking(0xFEEDFACE);
+    printf("Core0 is ready to write...\n");
+    // Várakozás, amíg a core1 jelez (FIFO-n keresztül)
+    uint32_t signal = multicore_fifo_pop_blocking();
+    if (signal == 0xDEADBEEF) {
+        // A core1 jelezte, hogy az írás kész, újraindítjuk a Picót
+        watchdog_reboot(0, 0, 0);
+    }
 }
 
 // -------------------------------------------
 // UDP handler
 // -------------------------------------------
-void __time_critical_func(handle_udp)() {
-    
-    while(gpio_get(IRQ_PIN) == 0);  // Várakozás az interruptra
-    time_diff = absolute_time_diff_us(last_packet_time, get_absolute_time());
-    // Non-blocking adatellenőrzés
-    if(getSn_RX_RSR(0) != 0) {
-        counter++;
-        int len = _recvfrom(0, rx_buffer, rx_size, src_ip, &src_port);
-        if (len > 0) {
-            // checksum error detection
-            jump_table_checksum();
-            last_packet_time = get_absolute_time();
+void __not_in_flash_func(handle_udp)() {
+    while (1){
+        while(gpio_get(IRQ_PIN) == 0)
+        {
+            // ha varakozas kozben kell a core1-nek a FIFO-ra irni
+            if (multicore_fifo_rvalid()) {
+                break;
+            }
         }
-        memcpy(tx_buffer, temp_tx_buffer, 5); // copy the temp buffer to tx_buffer
-        // checksum generation
-        jump_table_checksum_in();
-        _sendto(0, tx_buffer, tx_size, src_ip, src_port);
+        // reset w5100S chip interrupt
+        time_diff = absolute_time_diff_us(last_packet_time, get_absolute_time());
+        // Non-blocking adatellenőrzés
+        if(getSn_RX_RSR(0) != 0) {
+            counter++;
+            int len = _recvfrom(0, rx_buffer, rx_size, src_ip, &src_port);
+            if (len > 0) {
+                // checksum error detection
+                jump_table_checksum();
+                last_packet_time = get_absolute_time();
+            }
+            memcpy(tx_buffer, temp_tx_buffer, 5); // copy the temp buffer to tx_buffer
+            // checksum generation
+            jump_table_checksum_in();
+            _sendto(0, tx_buffer, tx_size, src_ip, src_port);
+        }
+
+        // hat erre meg nem jottem ra hogy hogyan kellene megoldani 
+        if (multicore_fifo_rvalid()) {
+        uint32_t signal = multicore_fifo_pop_blocking();
+        printf("Core1 signal: %08X\n", signal);
+        if (signal == 0xCAFEBABE) {
+            // Átváltás RAM-ban futó kódra
+            core0_wait();
+            }
+        }  // Várakozás az interruptra
+
     }
 }
 
@@ -622,4 +674,27 @@ float low_pass_filter(float new_sample, float previous_filtered, bool *first_sam
         return new_sample; // Initialize with first sample
     }
     return ALPHA * new_sample + (1.0f - ALPHA) * previous_filtered;
+}
+
+typedef struct {
+    float min;
+    float max;
+} minmax_t;
+
+float scale_value(uint16_t xt) {
+
+    // x_min, x_max = 14, 4089
+    // y_min, y_max = 0, 4095
+    // return ((x - x_min) / (x_max - x_min)) * (y_max - y_min) + y_min
+
+
+    minmax_t x;
+    minmax_t y;
+
+    y.min = 0.0f;
+    y.max = 4095.0f;
+    x.min = (float)adc_min;
+    x.max = (float)adc_max;
+
+    return (((float)xt - x.min) / (x.max - x.min)) * (y.max - y.min) + y.min;
 }
