@@ -31,33 +31,36 @@ typedef struct {
     int port;
 } IpPort;
 
-// Struktúra az összes HAL adat tárolására
+
 typedef struct {
-    hal_float_t *analog_in;        // Analóg bemenet
-    hal_s32_t *analog_in_s32;      // Analóg bemenet 32 bites egész számként
-    hal_float_t *analog_min;       // Analóg skála negativ értéke
-    hal_float_t *analog_max;       // Analóg skála pozitiv értéke
-    hal_bit_t *analog_lowpass;     // Analóg aluláteresztő szűrő
-    hal_bit_t *analog_rounding;    // Analóg kerekítés
-    hal_bit_t *input_data[16];     // 16 bemenet
-    hal_bit_t *input_data_not[16]; // 16 bemenet negált értéke
-    hal_bit_t *output_data[8];     // 8 kimenet
-    hal_bit_t *connected;          // Kapcsolat állapota
-    hal_s32_t *current_tm;         // Aktuális idő
-    hal_bit_t *io_ready_in;        // io-ready-in
-    hal_bit_t *io_ready_out;       // io-ready-out
-    IpPort *ip_address;            // IP cím tárolása
+    hal_float_t *analog_in;
+    hal_s32_t *analog_in_s32;
+    hal_float_t *analog_min; 
+    hal_float_t *analog_max; 
+    hal_bit_t *analog_lowpass;  
+    hal_bit_t *analog_rounding; 
+    hal_bit_t *input_data[16];  
+    hal_bit_t *input_data_not[16];
+    hal_bit_t *output_data[8]; 
+    hal_bit_t *connected;  
+    hal_s32_t *current_tm; 
+    hal_bit_t *io_ready_in;  
+    hal_bit_t *io_ready_out;
+    hal_bit_t *oled_off; 
+    IpPort *ip_address; 
     int sockfd;
     struct sockaddr_in local_addr, remote_addr;
     uint8_t rx_buffer[5];
     uint8_t tx_buffer[3];
-    long long last_received_time;  // Utolsó sikeres fogadás ideje (nanoszekundum)
-    long long watchdog_timeout;  // 100 ms timeout
-    int watchdog_expired;  // Watchdog túlfutás jelzése (0: nem futott túl, 1: túlfutott)
-    long long current_time;  // Globális változó az időzítéshez
+    long long last_received_time;
+    long long watchdog_timeout;
+    int watchdog_expired; 
+    long long current_time;
     int index;
-    uint8_t checksum_index; // Ellenőrző összeg index
-    uint8_t checksum_index_in; // Ellenőrző összeg index
+    uint8_t checksum_index;
+    uint8_t checksum_index_in;
+    bool watchdog_running;
+    bool error_triggered;
 } io_samurai_data_t;
 
 static int instances = 0; // Példányok száma
@@ -73,19 +76,44 @@ float low_pass_filter(float new_sample, float previous_filtered, bool *first_sam
     return ALPHA * new_sample + (1.0f - ALPHA) * previous_filtered;
 }
 
-// Analóg bemenet skálázása
+/*
+ * scale_adc - Scales a 16-bit ADC value to a range between min_value and max_value.
+ *
+ * @adc_in: The raw ADC input value (0 to ADC_MAX).
+ * @min_value: The minimum value of the output range.
+ * @max_value: The maximum value of the output range.
+ *
+ * Returns:
+ *   - The scaled value within [min_value, max_value].
+ *
+ * Notes:
+ *   - Clamps adc_in to [0, ADC_MAX] to handle invalid inputs.
+ *   - Assumes ADC_MAX is defined as the maximum ADC value.
+ */
 float scale_adc(uint16_t adc_in, float min_value, float max_value) {
-    // Ellenőrizzük, hogy az adc_in ne legyen kívül az érvényes tartományon
     if (adc_in < 0) adc_in = 0;
     if (adc_in > ADC_MAX) adc_in = ADC_MAX;
-
-    // Lineáris skálázás: (adc_in / ADC_MAX) * (max_value - min_value) + min_value
     float ratio = (float)adc_in / ADC_MAX;
     float result = ratio * (max_value - min_value) + min_value;
-
     return result;
 }
 
+/*
+ * init_socket - Initializes a UDP socket for the io-samurai module.
+ *
+ * @arg: Pointer to an io_samurai_data_t structure containing socket configuration data.
+ *
+ * Description:
+ *   - Creates a UDP socket and binds it to the local address and port specified in the ip_address field.
+ *   - Sets the socket to non-blocking mode.
+ *   - Configures the remote address for communication using the provided IP and port.
+ *   - Logs errors using rtapi_print_msg and closes the socket on failure.
+ *
+ * Notes:
+ *   - The socket is bound to INADDR_ANY to accept packets from any interface.
+ *   - If socket creation, binding, or IP address parsing fails, the socket is closed, and sockfd is set to -1.
+ *   - The function assumes the ip_address field in the io_samurai_data_t structure is valid.
+ */
 static void init_socket(io_samurai_data_t *arg) {
     io_samurai_data_t *d = arg;
 
@@ -128,12 +156,12 @@ static void init_socket(io_samurai_data_t *arg) {
 // Watchdog process
 void watchdog_process(void *arg, long period) {
     io_samurai_data_t *d = arg;
-    d->current_time += 1;  // Idő előrehaladása a period alapján
-
-    // Watchdog logika: túlfutás ellenőrzése
+    d->current_time += 1; 
+    d->watchdog_running = 1; 
+    
     long long elapsed = d->current_time - d->last_received_time;
     if (elapsed < 0) {
-        elapsed = 0;  // Ha negatív, akkor állítsuk 0-ra
+        elapsed = 0; 
     }
     if (elapsed > d->watchdog_timeout) {
         if (d->watchdog_expired == 0) {
@@ -141,96 +169,143 @@ void watchdog_process(void *arg, long period) {
             d->checksum_index_in = 1;  // Reset checksum index
             d->checksum_index = 1;     // Reset checksum index
         }
-        d->watchdog_expired = 1;  // Jelezzük, hogy a watchdog túlfutott
+        d->watchdog_expired = 1; 
     } else {
-        d->watchdog_expired = 0;  // Nincs túlfutás
+        d->watchdog_expired = 0; 
     }
-    // *d->current_tm = d->watchdog_expired;  // Frissítjük az eltelt időt
+    
 }
 
+// parse inputs
 void udp_io_process_recv(void *arg, long period) {
     io_samurai_data_t *d = arg;
-
     if (d->watchdog_expired) {
-        *d->output_data[10] = 0;  // Kapcsolat állapotát jelző pin
-        return;  // Ne fogadjunk adatot, ha a watchdog túlfutott
+        *d->io_ready_out = 0;
+        return;
     }
     int len = recvfrom(d->sockfd, d->rx_buffer, 5, 0, NULL, NULL);
     if (len == 5) {
         d->checksum_index_in += (uint8_t)(d->rx_buffer[0] + d->rx_buffer[1] + d->rx_buffer[2] + d->rx_buffer[3] + 1);
         uint8_t calcChecksum = jump_table[d->checksum_index_in];
         if (calcChecksum == d->rx_buffer[4]) {
-            // Érvényes csomag érkezett, connected = 1
             *d->connected = 1;
-            d->last_received_time = d->current_time;  // Frissítjük az utolsó fogadás idejét (arg-ból kapjuk az időt)
+            d->last_received_time = d->current_time;
             for (int i = 0; i < 8; i++) {
-                *d->input_data[i] = (d->rx_buffer[0] >> i) & 0x01;       // input-00 - input-07
-                *d->input_data_not[i] = 1 - *d->input_data[i]; // input-00 - input-07 negált érték
-                *d->input_data[i + 8] = (d->rx_buffer[1] >> i) & 0x01;   // input-08 - input-15
-                *d->input_data_not[i + 8] = 1 - *d->input_data[i + 8]; // input-08 - input-15 negált érték
+                *d->input_data[i] = (d->rx_buffer[0] >> i) & 0x01;
+                *d->input_data_not[i] = 1 - *d->input_data[i];
+                *d->input_data[i + 8] = (d->rx_buffer[1] >> i) & 0x01;
+                *d->input_data_not[i + 8] = 1 - *d->input_data[i + 8];
             }
-            // Analóg bemenet feldolgozása (rx_buffer[2] alsó 8 bit, rx_buffer[3] felső 8 bit)
-            uint16_t raw_adc = (d->rx_buffer[3] << 8 | d->rx_buffer[2]) & 0xfff; // 12 bites érték
-            float scaled_adc = scale_adc(raw_adc, *d->analog_min, *d->analog_max); // Szűrés
+            uint16_t raw_adc = (d->rx_buffer[3] << 8 | d->rx_buffer[2]) & 0xfff;
+            float scaled_adc = scale_adc(raw_adc, *d->analog_min, *d->analog_max);
             if (*d->analog_rounding == 1) {
-                scaled_adc = roundf(scaled_adc); // Kerekítés
+                scaled_adc = roundf(scaled_adc);
             }
-            *d->analog_in_s32 = (int32_t)scaled_adc; // Szűrt analóg érték 32 bites egész számként
-            *d->analog_in = scaled_adc; // Szűrt analóg érték
+            *d->analog_in_s32 = (int32_t)scaled_adc;
+            *d->analog_in = scaled_adc;
         } else {
-            // Érvénytelen checksum, de még mindig van adat
             rtapi_print_msg(RTAPI_MSG_ERR, "io-samurai.%d: checksum error: %02x != %02x\n", d->index, d->rx_buffer[4], calcChecksum);
             *d->io_ready_out = 0;
             *d->connected = 0;
         }
     } else {
-        // Nem érkezett adat, connected = 0
         *d->io_ready_out = 0;
         *d->connected = 0;
     }
 }
 
+/*
+ * set_bit - Sets or clears a specific bit in an 8-bit buffer.
+ *
+ * @buffer: The 8-bit value to modify.
+ * @bit_position: The position of the bit to set or clear (0 to 7).
+ * @value: The value to set the bit to (0 to clear, non-zero to set).
+ *
+ * Returns:
+ *   - The modified 8-bit buffer with the specified bit set or cleared.
+ *   - The original buffer if bit_position is out of range (< 0 or >= 8).
+ *
+ * Notes:
+ *   - Bit positions are zero-based (0 is the least significant bit).
+ *   - The function uses bitwise operations to set or clear the bit.
+ */
 uint8_t set_bit(uint8_t buffer, int bit_position, int value) {
     if (bit_position < 0 || bit_position >= 8) {
-        return buffer; // Érvénytelen bit pozíció
+        return buffer;
     }
     if (value) {
-        buffer |= (1 << bit_position); // Bit beállítása
+        buffer |= (1 << bit_position);
     } else {
-        buffer &= ~(1 << bit_position); // Bit törlése
+        buffer &= ~(1 << bit_position);
     }
-    return buffer; // Visszaadjuk a módosított bájtot
+    return buffer;
 }
 
+// parse outputs
 void udp_io_process_send(void *arg, long period) {
     io_samurai_data_t *d = arg;
-
+    // if watchdog expired, do not send data
     if (d->watchdog_expired) {
-        *d->io_ready_out = 0;  // Kapcsolat állapotát jelző pin
-        return;  // Ne küldjünk adatot, ha a watchdog túlfutott
+        *d->io_ready_out = 0;  // turn off io-ready-out (breaking estop-loop)
+        return;
     }
-    for (int i = 0; i < 8; i++) {
-        d->tx_buffer[0] |= (*d->output_data[i]) << i;      // output-00 - output-07
-        //tx_buffer[1] |= (*output_data[i + 8]) << i;  // output-08 - output-15
-    }
-    
-    if (*d->analog_lowpass == 1) {
-        d->tx_buffer[1] = set_bit(d->tx_buffer[1], 0, 1);
-    } else {
-        d->tx_buffer[1] = set_bit(d->tx_buffer[1], 0, 0);
-    }
+    if (d->watchdog_running == 1) {
+        for (int i = 0; i < 8; i++) {
+            d->tx_buffer[0] |= (*d->output_data[i]) << i;
+        }
+       
+        if (*d->oled_off){
+            d->tx_buffer[1] = set_bit(d->tx_buffer[1], 1, 1);
+        }
 
-    d->checksum_index += d->tx_buffer[0] + d->tx_buffer[1] + 1;
-    d->tx_buffer[2] = jump_table[d->checksum_index];
+        if (*d->analog_lowpass == 1) {
+            d->tx_buffer[1] = set_bit(d->tx_buffer[1], 0, 1);
+        } else {
+            d->tx_buffer[1] = set_bit(d->tx_buffer[1], 0, 0);
+        }
+        
+        // calculate next checksum
+        d->checksum_index += d->tx_buffer[0] + d->tx_buffer[1] + 1;
+        d->tx_buffer[2] = jump_table[d->checksum_index];
+
+        if (*d->io_ready_in == 1) {
+            *d->io_ready_out = *d->io_ready_in;  // Seems to be all ok so pass the io-ready-in to io-ready-out
+        } else {
+            *d->io_ready_out = 0;  // no io-ready-in, no io-ready-out
+        }
+
+    }
+    else{
+        // if the watchdog is not running, we should not send data (io-samurai side is going to timeout error and turn off outputs)
+        if (!d->error_triggered){
+            d->error_triggered = true; // Set the error triggered flag to prevent multiple messages
+            *d->io_ready_out = 0;      // set the io-ready-out pin to 0 to break the estop-loop
+            rtapi_print_msg(RTAPI_MSG_ERR ,"io-samurai.%d: watchdog not running\n", d->index);
+            return;  // No data to send (generate io-samurai side timeout error)
+        }
+    }
     sendto(d->sockfd, &d->tx_buffer, sizeof(d->tx_buffer), 0, &d->remote_addr, sizeof(d->remote_addr));
     memset(d->tx_buffer, 0, 3);
-    if (*d->io_ready_in == 1) {
-        *d->io_ready_out = *d->io_ready_in;  // Kapcsolat állapotát jelző pin
-    } else {
-        *d->io_ready_out = 0;  // Kapcsolat állapotát jelző pin
-    }
+
 }
 
+/*
+ * parse_ip_port - Parses a string containing IP:port pairs separated by semicolons.
+ *
+ * @input: A null-terminated string containing IP:port pairs (e.g., "192.168.1.1:8080;10.0.0.1:80").
+ * @output: An array of IpPort structures to store the parsed IP addresses and ports.
+ * @max_count: The maximum number of entries that can be stored in the output array.
+ *
+ * Returns:
+ *   - The number of valid IP:port pairs successfully parsed and stored in output.
+ *   - -1 if input is NULL, output is NULL, max_count <= 0, or memory allocation fails.
+ *
+ * Notes:
+ *   - Each IP:port pair must be in the format "IP:port" (e.g., "192.168.1.1:8080").
+ *   - Invalid entries (missing colon, invalid port, etc.) are logged and skipped.
+ *   - The function ensures the IP string is null-terminated and port is within valid range (0-65535).
+ *   - The input string is duplicated to avoid modifying the original string.
+ */
 int parse_ip_port(const char *input, IpPort *output, int max_count) {
     if (input == NULL || output == NULL || max_count <= 0) {
         return -1;
@@ -238,7 +313,7 @@ int parse_ip_port(const char *input, IpPort *output, int max_count) {
 
     char *input_copy = strdup(input);
     if (input_copy == NULL) {
-        return -1; // Memory allocation failed
+        return -1;
     }
 
     char *saveptr1;
@@ -251,10 +326,11 @@ int parse_ip_port(const char *input, IpPort *output, int max_count) {
 
         char *colon = strchr(entry, ':');
         if (colon == NULL) {
+            rtapi_print_msg(RTAPI_MSG_ERR, "io-samurai: Invalid entry format: %s\n", entry);
             continue; // Skip invalid entry without a colon
         }
 
-        *colon = '\0'; // Split into IP and port parts
+        *colon = '\0';
         char *ip = entry;
         char *port_str = colon + 1;
 
@@ -262,6 +338,7 @@ int parse_ip_port(const char *input, IpPort *output, int max_count) {
         char *endptr;
         long port = strtol(port_str, &endptr, 10);
         if (*endptr != '\0' || port < 0 || port > 65535) {
+            rtapi_print_msg(RTAPI_MSG_ERR, "io-samurai: Invalid port number: %s\n", port_str);
             continue; // Skip invalid port
         }
 
@@ -279,7 +356,6 @@ int parse_ip_port(const char *input, IpPort *output, int max_count) {
 int rtapi_app_main(void) {
     int r;
 
-    // Üzenetszint beállítása INFO-ra
     rtapi_set_msg_level(RTAPI_MSG_INFO);
 
         IpPort results[8];
@@ -312,13 +388,14 @@ int rtapi_app_main(void) {
             rtapi_print_msg(RTAPI_MSG_INFO, "io-samurai.%d: hal_data allocated at %p\n", j, &hal_data[j]);
             hal_data[j].checksum_index = 1;
             hal_data[j].checksum_index_in = 1;
-            hal_data[j].index = j; // Store the index for later use
+            hal_data[j].index = j; 
             hal_data[j].watchdog_timeout = 10; // ~10 ms timeout
-            hal_data[j].current_time = 0; // Initialize the current time
-            hal_data[j].last_received_time = 0; // Initialize the last received time
-            hal_data[j].watchdog_expired = 0; // Initialize the watchdog expired flag
-
+            hal_data[j].current_time = 0;
+            hal_data[j].last_received_time = 0;
+            hal_data[j].watchdog_expired = 0;
+            hal_data[j].watchdog_running = 0;
             hal_data[j].ip_address = &results[j];
+            hal_data[j].error_triggered = false;
 
             rtapi_print_msg(RTAPI_MSG_INFO, "io-samurai.%d: init_socket\n", j);
             init_socket(&hal_data[j]);
@@ -326,7 +403,6 @@ int rtapi_app_main(void) {
 
             memchr(name, 0, sizeof(name));
 
-            // Bemeneti pinek létrehozása (HAL_OUT)
             for (int i = 0; i < 16; i++) {
                 memchr(name, 0, sizeof(name));
                 snprintf(name, sizeof(name), "io-samurai.%d.input-%02d", j, i);
@@ -338,7 +414,6 @@ int rtapi_app_main(void) {
                 }
             }
 
-            // Bemeneti pinek létrehozása (HAL_OUT)
             for (int i = 0; i < 16; i++) {
                 memchr(name, 0, sizeof(name));
                 // create io-samurai instance
@@ -351,7 +426,6 @@ int rtapi_app_main(void) {
                 }
             }
 
-            // Kimeneti pinek létrehozása (HAL_IN)
             for (int i = 0; i < 8; i++) {
                 memchr(name, 0, sizeof(name));
                 snprintf(name, sizeof(name), "io-samurai.%d.output-%02d", j, i);
@@ -376,8 +450,7 @@ int rtapi_app_main(void) {
             memchr(name, 0, sizeof(name));
             snprintf(name, sizeof(name), "io-samurai.%d.io-ready-in", j);
 
-            // io-ready-in pin létrehozása (HAL_OUT)
-            r = hal_pin_bit_newf(HAL_IN, &hal_data[j].io_ready_in, comp_id, name, j);
+               r = hal_pin_bit_newf(HAL_IN, &hal_data[j].io_ready_in, comp_id, name, j);
             if (r < 0) {
                 rtapi_print_msg(RTAPI_MSG_ERR, "io-samurai: ERROR: pin connected export failed with err=%i\n", r);
                 hal_exit(comp_id);
@@ -387,7 +460,6 @@ int rtapi_app_main(void) {
             memchr(name, 0, sizeof(name));
             snprintf(name, sizeof(name), "io-samurai.%d.io-ready-out", j);
 
-            // io-ready-out pin létrehozása (HAL_OUT)
             r = hal_pin_bit_newf(HAL_OUT, &hal_data[j].io_ready_out, comp_id, name, j);
             if (r < 0) {
                 rtapi_print_msg(RTAPI_MSG_ERR, "io-samurai: ERROR: pin connected export failed with err=%i\n", r);
@@ -424,7 +496,7 @@ int rtapi_app_main(void) {
                 hal_exit(comp_id);
                 return r;
             }
-            *hal_data[j].analog_min = 0.0f; // Kezdeti skála érték
+            *hal_data[j].analog_min = 0.0f;
 
             memchr(name, 0, sizeof(name));
             snprintf(name, sizeof(name), "io-samurai.%d.analog-max", j);
@@ -435,45 +507,56 @@ int rtapi_app_main(void) {
                 hal_exit(comp_id);
                 return r;
             }
-            *hal_data[j].analog_max = 1.0f; // Kezdeti skála érték
+            *hal_data[j].analog_max = 1.0f;
 
             memchr(name, 0, sizeof(name));
             snprintf(name, sizeof(name), "io-samurai.%d.analog-rounding", j);
 
-            // Kerekítés pin létrehozása (HAL_OUT)
+
             r = hal_pin_bit_newf(HAL_IN, &hal_data[j].analog_rounding, comp_id, name, j);
             if (r < 0) {
                 rtapi_print_msg(RTAPI_MSG_ERR, "io-samurai: ERROR: pin analog-rounding export failed with err=%i\n", r);
                 hal_exit(comp_id);
                 return r;
             }
-            *hal_data[j].analog_rounding = 0; // Kezdeti kerekítés érték
+            *hal_data[j].analog_rounding = 0;
 
             memchr(name, 0, sizeof(name));
             snprintf(name, sizeof(name), "io-samurai.%d.analog-lowpass", j);
 
-            // Kerekítés pin létrehozása (HAL_OUT)
+
             r = hal_pin_bit_newf(HAL_IN, &hal_data[j].analog_lowpass, comp_id, name, j);
             if (r < 0) {
                 rtapi_print_msg(RTAPI_MSG_ERR, "io-samurai: ERROR: pin analog-rounding export failed with err=%i\n", r);
                 hal_exit(comp_id);
                 return r;
             }
-            *hal_data[j].analog_lowpass = 0; // Kezdeti aluláteresztő szűrő érték
+            *hal_data[j].analog_lowpass = 0;
 
             memchr(name, 0, sizeof(name));
             snprintf(name, sizeof(name), "io-samurai.%d.elapsed-time", j);
 
-            // Kerekítés pin létrehozása (HAL_OUT)
+
             r = hal_pin_s32_newf(HAL_OUT, &hal_data[j].current_tm, comp_id, name, j);
             if (r < 0) {
                 rtapi_print_msg(RTAPI_MSG_ERR, "io-samurai: ERROR: pin analog-rounding export failed with err=%i\n", r);
                 hal_exit(comp_id);
                 return r;
             }
-            *hal_data[j].current_tm = 0; // Kezdeti aluláteresztő szűrő érték
+            *hal_data[j].current_tm = 0;
 
-            // Watchdog függvény exportálása
+            memchr(name, 0, sizeof(name));
+            snprintf(name, sizeof(name), "io-samurai.%d.oled-off", j);
+
+
+            r = hal_pin_bit_newf(HAL_IN, &hal_data[j].oled_off, comp_id, name, j);
+            if (r < 0) {
+                rtapi_print_msg(RTAPI_MSG_ERR, "io-samurai: ERROR: pin oled-off export failed with err=%i\n", r);
+                hal_exit(comp_id);
+                return r;
+            }
+            *hal_data[j].oled_off = 0;
+
             char watchdog_name[48] = {0};
             snprintf(watchdog_name, sizeof(watchdog_name),"io-samurai.%d.watchdog-process", j);
             r = hal_export_funct(watchdog_name, watchdog_process, &hal_data[j], 1, 0, comp_id);
