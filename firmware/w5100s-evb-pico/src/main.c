@@ -134,6 +134,18 @@ void core1_entry() {
         // LED Indicating timeout status
         gpio_put(LED_PIN, !timeout_error);
 
+        // Check for timeout
+        if (time_diff > TIMEOUT_US) {
+            checksum_index = 1;
+            checksum_index_in = 1;
+            timeout_error = 1;
+            checksum_error = 0;
+            src_ip[0] = 0;
+        }
+        else {
+            timeout_error = 0;
+        }
+
 #ifdef MCP23008_ADDR
         // when not checksum error or timeout error writing out the outputs
         if (checksum_error == 0 && timeout_error == 0) {
@@ -141,6 +153,7 @@ void core1_entry() {
         }
         else
         {
+            rx_buffer[0] = 0x00;
             mcp_write_register(MCP23008_ADDR, 0x09, 0x00); // Writing zeros when error
         }
 #endif
@@ -158,6 +171,7 @@ void core1_entry() {
         
 
 #ifdef MCP23017_ADDR
+        memset(temp_tx_buffer, 0, sizeof(temp_tx_buffer)); // clear the temp buffer
         //Reading the GPIO-A and GPIO-B ports from the MCP23017 and writing them to the temp_tx_buffer
         temp_tx_buffer[0] = mcp_read_register(MCP23017_ADDR, 0x13); // beolvassuk az MCP23017 GPIO-B portrol az also input sort 0-7
         temp_tx_buffer[1] = mcp_read_register(MCP23017_ADDR, 0x12); // beolvassuk az MCP23017 GPIO-A portrol az felso input sort 8-15
@@ -168,28 +182,30 @@ void core1_entry() {
         temp_tx_buffer[3] |= lcd ? 0x20 : 0x00; // set the third bit to 1 if SH1106 OLED is present
 
 #endif
+        // rx_buffer[1] bit 1 is used to enable/disable the OLED
+        // rx_buffer[1] bit 0 is used to enable/disable the low-pass filter
 
         // when oled connected (this slows down the program so use only when needed)
         if (lcd){
-            char ip_str[16]; // this holds the IP address
+            char txt_buff[16];
             // lcd clear
             sh1106_clear();
             // draw output and input bits
             draw_bytes(rx_buffer[0], 0, 0, 0); 
             draw_text("0123456789ABCDEF", 0, 9);
             draw_bytes(tx_buffer[0], tx_buffer[1], 0, 18); 
-            sprintf(ip_str, "ADC: %d", (uint16_t)filtered_adc);
-            draw_text(ip_str, 0, 32);
+            sprintf(txt_buff, "ADC: %d", (uint16_t)filtered_adc);
+            draw_text(txt_buff, 0, 32);
             if (checksum_error == 0){
                 if (src_ip[0] != 0) {
                     // IP to string conversion (remote ip)
-                    sprintf(ip_str, "%d.%d.%d.%d", src_ip[0], src_ip[1], src_ip[2], src_ip[3]);
+                    sprintf(txt_buff, "%d.%d.%d.%d", src_ip[0], src_ip[1], src_ip[2], src_ip[3]);
                 
                 } else {
                     // IP to string conversion (local ip)
-                    sprintf(ip_str, "%d.%d.%d.%d", net_info.ip[0], net_info.ip[1], net_info.ip[2], net_info.ip[3]);
+                    sprintf(txt_buff, "%d.%d.%d.%d", net_info.ip[0], net_info.ip[1], net_info.ip[2], net_info.ip[3]);
                 }
-                draw_text(ip_str, 0, 44);
+                draw_text(txt_buff, 0, 44);
                 if (timeout_error == 1) {
                     draw_text("Timeout error", 0, 54);
                 }
@@ -198,23 +214,11 @@ void core1_entry() {
                 draw_text("Checksum error", 0, 54);
             }
             if (checksum_error == 0 && timeout_error == 0) {
-                sprintf(ip_str, "Connected.");
-                draw_text(ip_str, 0, 54);
+                sprintf(txt_buff, "Connected.");
+                draw_text(txt_buff, 0, 54);
             }
             sh1106_update();
             }
-
-        // Check for timeout
-        if (time_diff > TIMEOUT_US) {
-            checksum_index = 1;
-            checksum_index_in = 1;
-            timeout_error = 1;
-            checksum_error = 0;
-            src_ip[0] = 0;
-        }
-        else {
-            timeout_error = 0;
-        }
 
         handle_serial_input();
         }
@@ -432,6 +436,10 @@ void __time_critical_func(jump_table_checksum_in)() {
 // RAM-ban futó függvény, amit a core0 futtat az írás alatt
 void __not_in_flash_func(core0_wait)(void) {
     // Jelzés a core1-nek, hogy készen állunk
+    // warunk hogy a core0 fifoban legyen hely
+    while (!multicore_fifo_wready()) {
+        tight_loop_contents();
+    }
     multicore_fifo_push_blocking(0xFEEDFACE);
     printf("Core0 is ready to write...\n");
     // Várakozás, amíg a core1 jelez (FIFO-n keresztül)
@@ -441,6 +449,7 @@ void __not_in_flash_func(core0_wait)(void) {
         watchdog_reboot(0, 0, 0);
     }
 }
+
 
 // -------------------------------------------
 // UDP handler
