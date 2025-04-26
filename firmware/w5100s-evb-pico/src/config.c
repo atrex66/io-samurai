@@ -59,12 +59,15 @@ void __time_critical_func(save_config_to_flash)() {
 
     if (core_id == 1)
     {
+        //printf("Core1: Waiting for write fifo ready\n");
+        while (!multicore_fifo_wready()) {
+            tight_loop_contents();
+        }
         // Jelzés a core0-nak, hogy készüljön fel az írásra
         multicore_fifo_push_blocking(0xCAFEBABE);
 
-        printf("Waiting for core0 to be ready...\n");
         // Várjuk meg, amíg a core0 készen áll
-        while(multicore_fifo_rvalid()) {
+        while(!multicore_fifo_rvalid()) {
             tight_loop_contents();
         }
         uint32_t signal = multicore_fifo_pop_blocking();
