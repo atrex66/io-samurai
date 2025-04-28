@@ -23,23 +23,21 @@ configuration_t default_config = {
     .sn = {255, 255, 255, 0},
     .gw = {192, 168, 0, 1},
     .dns = {8, 8, 8, 8},
-    .dhcp = 1, // satic IP address
+    .dhcp = 1,
     .port = 8888,
-    .timeout = 100000, // 100000 uS = 100 ms
+    .timeout = 100000,
     .adc_min = 0,
     .adc_max = 4095
 };
 
-// UDP port
 uint16_t port = 0;
 int16_t adc_offset = 0;
 uint16_t adc_min = 0;
 uint16_t adc_max = 0;
 configuration_t *flash_config = NULL;
 
-// Flash tárolási beállítások
 #define FLASH_TARGET_OFFSET (1024 * 1024) // 1mb offset
-#define FLASH_DATA_SIZE (sizeof(configuration_t)) // wiz_NetInfo + 1 bájt checksum
+#define FLASH_DATA_SIZE (sizeof(configuration_t))
 
 
 void __time_critical_func(save_config_to_flash)() {
@@ -53,20 +51,15 @@ void __time_critical_func(save_config_to_flash)() {
         return;
     }
     
-    // handshake a core0-nak, hogy ne írjon flash-be
-
     uint core_id = get_core_num();
 
     if (core_id == 1)
     {
-        //printf("Core1: Waiting for write fifo ready\n");
         while (!multicore_fifo_wready()) {
             tight_loop_contents();
         }
-        // Jelzés a core0-nak, hogy készüljön fel az írásra
         multicore_fifo_push_blocking(0xCAFEBABE);
 
-        // Várjuk meg, amíg a core0 készen áll
         while(!multicore_fifo_rvalid()) {
             tight_loop_contents();
         }
@@ -79,8 +72,8 @@ void __time_critical_func(save_config_to_flash)() {
         printf("Core0 is ready, proceeding with flash write...\n");
     }
 
-    memset(data, 0xFF, FLASH_SECTOR_SIZE);                        // Töröljük a flash szektort
-    memcpy(data, flash_config, FLASH_SECTOR_SIZE);                // Másoljuk át a konfigurációt
+    memset(data, 0xFF, FLASH_SECTOR_SIZE);
+    memcpy(data, flash_config, FLASH_SECTOR_SIZE);
     uint32_t ints = save_and_disable_interrupts();
     flash_safe_execute_core_deinit();
     flash_range_erase(FLASH_TARGET_OFFSET, FLASH_SECTOR_SIZE);
@@ -88,9 +81,7 @@ void __time_critical_func(save_config_to_flash)() {
     restore_interrupts(ints);
     free(data);
     if (core_id == 1){
-    // Jelzés a core0-nak, hogy kész vagyunk
     multicore_fifo_push_blocking(0xDEADBEEF);
-    // Várunk az újraindításra
     while (1) {
         tight_loop_contents();
         }

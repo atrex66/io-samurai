@@ -46,11 +46,9 @@ extern uint16_t adc_min;
 extern uint16_t adc_max;
 wiz_NetInfo net_info;
 
-// -------------------------------------------
-// Globális változók
-// -------------------------------------------
-uint8_t rx_buffer[rx_size] = {0, 0, 0x5e};
-uint8_t tx_buffer[tx_size] = {0};
+uint8_t rx_buffer[rx_size] = {0,};
+uint8_t temp_tx_buffer[tx_size] = {0,};
+uint8_t tx_buffer[tx_size] = {0,};
 uint8_t counter = 0;
 uint8_t first_send = 1;
 
@@ -64,14 +62,12 @@ static dma_channel_config dma_channel_config_rx;
 uint8_t src_ip[4];
 uint16_t src_port;
 
-// Data integrity variables
 uint8_t checksum_error = 0;
 uint8_t timeout_error = 0;
 uint32_t last_time = 0;
 static absolute_time_t last_packet_time;
-uint32_t TIMEOUT_US = 100000; // 100 ms = 100000 us
+uint32_t TIMEOUT_US = 100000;
 uint32_t time_diff;
-uint8_t temp_tx_buffer[5] = {0x00, 0x00, 0x00, 0x00, 0x04};
 
 
 // -------------------------------------------
@@ -82,7 +78,6 @@ void core1_entry() {
     uint8_t conf;
     bool MCP23008_present = false;
     bool MCP23017_present = false;
-     // Initialize filter variables
     float filtered_adc = 0.0f;
     bool first_sample = true;
 
@@ -105,7 +100,7 @@ void core1_entry() {
     if (i2c_check_address(i2c1, MCP23008_ADDR)) {
         MCP23008_present = true;
         printf("MCP23008 (Outputs) Init\n");
-        mcp_write_register(MCP23008_ADDR, 0x00, 0x00); // IODIR = 0xFF (Inputs)
+        mcp_write_register(MCP23008_ADDR, 0x00, 0x00);
     }
     else {
         printf("No MCP23008 (Outputs) found on %#x address.\n", MCP23008_ADDR);
@@ -113,14 +108,13 @@ void core1_entry() {
 
 #endif
 
-    // beallitjuk az MCP23017-et bemenetnek
 #ifdef MCP23017_ADDR
     printf("Detecting MCP23017 (Inputs) on %#x address\n", MCP23017_ADDR);
     if (i2c_check_address(i2c1, MCP23017_ADDR)) {
         MCP23017_present = true;
         printf("MCP23017 (Inputs) Init\n");
-        mcp_write_register(MCP23017_ADDR, 0x00, 0xff);   // GPIO-A Input
-        mcp_write_register(MCP23017_ADDR, 0x01, 0xff);   // GPIO-B Input
+        mcp_write_register(MCP23017_ADDR, 0x00, 0xff);
+        mcp_write_register(MCP23017_ADDR, 0x01, 0xff);
     }
     else {
         printf("No MCP23017 (Inputs) found on %#x address.\n", MCP23017_ADDR);
@@ -128,13 +122,9 @@ void core1_entry() {
 #endif
 
     printf("Ready...\n");
-
-    // Main loop for core1
     while (1) {
-        // LED Indicating timeout status
         gpio_put(LED_PIN, !timeout_error);
 
-        // Check for timeout
         if (time_diff > TIMEOUT_US) {
             checksum_index = 1;
             checksum_index_in = 1;
@@ -147,21 +137,19 @@ void core1_entry() {
         }
 
 #ifdef MCP23008_ADDR
-        // when not checksum error or timeout error writing out the outputs
         if (checksum_error == 0 && timeout_error == 0) {
             mcp_write_register(MCP23008_ADDR, 0x09, rx_buffer[0]);
         }
         else
         {
             rx_buffer[0] = 0x00;
-            mcp_write_register(MCP23008_ADDR, 0x09, 0x00); // Writing zeros when error
+            mcp_write_register(MCP23008_ADDR, 0x09, 0x00);
         }
 #endif
 
         result = scale_value(adc_read());
         float voltage = (float) result;
 
-        // Apply low-pass filter
         if (rx_buffer[1] && 0x01){
             filtered_adc = low_pass_filter(voltage, filtered_adc, &first_sample);
         }
@@ -171,26 +159,19 @@ void core1_entry() {
         
 
 #ifdef MCP23017_ADDR
-        memset(temp_tx_buffer, 0, sizeof(temp_tx_buffer)); // clear the temp buffer
-        //Reading the GPIO-A and GPIO-B ports from the MCP23017 and writing them to the temp_tx_buffer
-        temp_tx_buffer[0] = mcp_read_register(MCP23017_ADDR, 0x13); // beolvassuk az MCP23017 GPIO-B portrol az also input sort 0-7
-        temp_tx_buffer[1] = mcp_read_register(MCP23017_ADDR, 0x12); // beolvassuk az MCP23017 GPIO-A portrol az felso input sort 8-15
-        temp_tx_buffer[2] = (uint16_t)filtered_adc & 0xFF; // lower byte of ADC
-        temp_tx_buffer[3] = (uint16_t)filtered_adc >> 8; // upper byte of ADC
-        temp_tx_buffer[3] |= MCP23008_present ? 0x80 : 0x00; // set the first bit to 1 if MCP23008 is present
-        temp_tx_buffer[3] |= MCP23017_present ? 0x40 : 0x00; // set the second bit to 1 if MCP23017 is present
-        temp_tx_buffer[3] |= lcd ? 0x20 : 0x00; // set the third bit to 1 if SH1106 OLED is present
+        memset(temp_tx_buffer, 0, sizeof(temp_tx_buffer));
+        temp_tx_buffer[0] = mcp_read_register(MCP23017_ADDR, 0x13);
+        temp_tx_buffer[1] = mcp_read_register(MCP23017_ADDR, 0x12);
+        temp_tx_buffer[2] = (uint16_t)filtered_adc & 0xFF;
+        temp_tx_buffer[3] = (uint16_t)filtered_adc >> 8;
+        temp_tx_buffer[3] |= MCP23008_present ? 0x80 : 0x00;
+        temp_tx_buffer[3] |= MCP23017_present ? 0x40 : 0x00;
+        temp_tx_buffer[3] |= lcd ? 0x20 : 0x00;
 
 #endif
-        // rx_buffer[1] bit 1 is used to enable/disable the OLED
-        // rx_buffer[1] bit 0 is used to enable/disable the low-pass filter
-
-        // when oled connected (this slows down the program so use only when needed)
         if (lcd){
             char txt_buff[16];
-            // lcd clear
             sh1106_clear();
-            // draw output and input bits
             draw_bytes(rx_buffer[0], 0, 0, 0); 
             draw_text("0123456789ABCDEF", 0, 9);
             draw_bytes(tx_buffer[0], tx_buffer[1], 0, 18); 
@@ -198,11 +179,9 @@ void core1_entry() {
             draw_text(txt_buff, 0, 32);
             if (checksum_error == 0){
                 if (src_ip[0] != 0) {
-                    // IP to string conversion (remote ip)
                     sprintf(txt_buff, "%d.%d.%d.%d", src_ip[0], src_ip[1], src_ip[2], src_ip[3]);
                 
                 } else {
-                    // IP to string conversion (local ip)
                     sprintf(txt_buff, "%d.%d.%d.%d", net_info.ip[0], net_info.ip[1], net_info.ip[2], net_info.ip[3]);
                 }
                 draw_text(txt_buff, 0, 44);
@@ -224,27 +203,10 @@ void core1_entry() {
         }
 }
 
-void run_from_ram(){
-    // This function is called from RAM
-    // You can add your code here
-    printf("Running from RAM\n");
-}
-
-void call_function_ram(void *func) {
-    void *f;
-    f = (void *)malloc(sizeof(func));
-    memcpy(f, &func, sizeof(func));
-    // Call the function
-    void (*function_ptr)() = (void (*)())f;
-    function_ptr();
-}
-
 // -------------------------------------------
 // (Core 0) UDP communication (DMA, SPI)
 // -------------------------------------------
 int main() {
-
-    // clear_flash();
 
     stdio_init_all();
     stdio_usb_init();
@@ -254,17 +216,15 @@ int main() {
     sleep_ms(2000);
 
 
-    printf("\033[2J"); // ANSI escape kód a képernyő törléséhez
-    printf("\033[H");  // kurzor vissza az elejére (0,0 pozíció)
+    printf("\033[2J");
+    printf("\033[H");
     
     printf("\n\n--- IO-Samurai V1.0 ---\n");
     printf("Viola Zsolt 2025\n");
     printf("E-mail:atrex66@gmail.com\n");
     printf("\n");
-    // SYSCLK beállítása 160 MHz-re
     set_sys_clock_khz(125000, true);
     
-    // CLK_PERI beállítása SYSCLK-ra (160 MHz)
     clock_configure(clk_peri,
                     0,
                     CLOCKS_CLK_PERI_CTRL_AUXSRC_VALUE_CLK_SYS,
@@ -276,7 +236,6 @@ int main() {
     hw_write_masked(&spi_get_hw(spi0)->cr0, (0) << SPI_SSPCR0_SCR_LSB, SPI_SSPCR0_SCR_BITS); // SCR = 0
     hw_write_masked(&spi_get_hw(spi0)->cpsr, 4, SPI_SSPCPSR_CPSDVSR_BITS); // CPSDVSR = 4
     
-    // reset IO port expanders
     gpio_init(MCP_ALL_RESET);
     gpio_set_dir(MCP_ALL_RESET, GPIO_OUT);
     gpio_put(MCP_ALL_RESET, 0);
@@ -290,28 +249,14 @@ int main() {
     gpio_pull_up(MCP23017_INTA);
     gpio_pull_up(MCP23017_INTB);
 
-    // W5100S Init
     w5100s_init();
-
-    printf("W5100S Init Done\n");
     w5100s_interrupt_init();
-    printf("W5100S Interrupt Init Done\n");
-  
-    // Initialize ADC
     adc_init();
-
-    // Select ADC0 (GPIO26)
-    adc_gpio_init(26); // Configures GPIO26 for ADC use
-    adc_select_input(0); // Select ADC input 0 (maps to GPIO26)
-
-    // load configuration from flash
+    adc_gpio_init(26);
+    adc_select_input(0);
     load_configuration();
     network_init();
-
-    // Core1 launch
     multicore_launch_core1(core1_entry);
-
-    // Main loop for core0
     handle_udp();
 }
 
@@ -320,12 +265,9 @@ void reset_with_watchdog() {
     while(1);
 }
 
-// -------------------------------------------
-// Optimalizált SPI függvények
-// -------------------------------------------
 void __time_critical_func(cs_select)() {
     gpio_put(PIN_CS, 0);
-    asm volatile("nop \n nop \n nop"); // 3 ciklus késleltetés
+    asm volatile("nop \n nop \n nop");
 }
 
 void __time_critical_func(cs_deselect)() {
@@ -346,66 +288,57 @@ int32_t __time_critical_func(_sendto)(uint8_t sn, uint8_t *buf, uint16_t len, ui
     uint16_t freesize;
     uint32_t taddr;
 
-    // Cél IP cím és port beállítása
     if (first_send) {
         setSn_DIPR(sn, addr);
         setSn_DPORT(sn, port);
         first_send = 0;
     }
 
-    // Adatok küldése
     wiz_send_data(sn, buf, len);
     setSn_CR(sn, Sn_CR_SEND);
-    while (getSn_CR(sn));  // Várakozás a parancs végrehajtására
+    while (getSn_CR(sn));
 
-    // Várakozás a küldés sikerességére
     while (1) {
         uint8_t tmp = getSn_IR(sn);
         if (tmp & Sn_IR_SENDOK) {
-            setSn_IR(sn, Sn_IR_SENDOK);  // Küldés sikerült
+            setSn_IR(sn, Sn_IR_SENDOK);
             break;
         } else if (tmp & Sn_IR_TIMEOUT) {
-            setSn_IR(sn, Sn_IR_TIMEOUT);  // Időtúllépés
+            setSn_IR(sn, Sn_IR_TIMEOUT);
             return SOCKERR_TIMEOUT;
         }
     }
-    return (int32_t)len;  // Sikeresen elküldött adatok hossza
+    return (int32_t)len;
 }
 
 int32_t __time_critical_func(_recvfrom)(uint8_t sn, uint8_t *buf, uint16_t len, uint8_t *addr, uint16_t *port) {
-    uint8_t head[8];  // UDP fejléc: 8 bájt (IP + port + hossz)
+    uint8_t head[8];
     uint16_t pack_len = 0;
 
-     // Várakozás, amíg adat érkezik
     while ((pack_len = getSn_RX_RSR(sn)) == 0) {
         if (getSn_SR(sn) == SOCK_CLOSED) return SOCKERR_SOCKCLOSED;
     }
 
-    // UDP fejléc beolvasása
     wiz_recv_data(sn, head, 8);
     setSn_CR(sn, Sn_CR_RECV);
-    while (getSn_CR(sn));  // Várakozás a parancs végrehajtására
+    while (getSn_CR(sn));
 
-    // Cím és port kinyerése a fejlécből
     addr[0] = head[0];
     addr[1] = head[1];
     addr[2] = head[2];
     addr[3] = head[3];
     *port = (head[4] << 8) | head[5];
  
-    // Csomag hosszának kinyerése
     uint16_t data_len = (head[6] << 8) | head[7];
 
-    // Csomag hosszának ellenőrzése
     if (len < data_len) pack_len = len;
     else pack_len = data_len;
 
-    // Adatok beolvasása
     wiz_recv_data(sn, buf, pack_len);
     setSn_CR(sn, Sn_CR_RECV);
-    while (getSn_CR(sn));  // Várakozás a parancs végrehajtására
+    while (getSn_CR(sn));
 
-    return (int32_t)pack_len;  // Fogadott adatok hossza
+    return (int32_t)pack_len;
 }
 
 void __time_critical_func(calculate_checksum)(uint8_t *data, uint8_t len) {
@@ -421,7 +354,6 @@ void __time_critical_func(jump_table_checksum)() {
         checksum_index += (uint8_t)(rx_buffer[0] + rx_buffer[1] + 1);
         uint8_t checksum = jump_table[checksum_index];
         if (checksum != rx_buffer[2]) {
-            // Használj checksum-ot itt
             checksum_error = 1;
         }
     }
@@ -433,19 +365,14 @@ void __time_critical_func(jump_table_checksum_in)() {
 }
 
 
-// RAM-ban futó függvény, amit a core0 futtat az írás alatt
 void __not_in_flash_func(core0_wait)(void) {
-    // Jelzés a core1-nek, hogy készen állunk
-    // warunk hogy a core0 fifoban legyen hely
     while (!multicore_fifo_wready()) {
         tight_loop_contents();
     }
     multicore_fifo_push_blocking(0xFEEDFACE);
     printf("Core0 is ready to write...\n");
-    // Várakozás, amíg a core1 jelez (FIFO-n keresztül)
     uint32_t signal = multicore_fifo_pop_blocking();
     if (signal == 0xDEADBEEF) {
-        // A core1 jelezte, hogy az írás kész, újraindítjuk a Picót
         watchdog_reboot(0, 0, 0);
     }
 }
@@ -454,41 +381,34 @@ void __not_in_flash_func(core0_wait)(void) {
 // -------------------------------------------
 // UDP handler
 // -------------------------------------------
-void __not_in_flash_func(handle_udp)() {
+void handle_udp() {
     while (1){
         while(gpio_get(IRQ_PIN) == 0)
         {
-            // ha varakozas kozben kell a core1-nek a FIFO-ra irni
             if (multicore_fifo_rvalid()) {
                 break;
             }
         }
-        // reset w5100S chip interrupt
         time_diff = absolute_time_diff_us(last_packet_time, get_absolute_time());
-        // Non-blocking adatellenőrzés
         if(getSn_RX_RSR(0) != 0) {
             counter++;
             int len = _recvfrom(0, rx_buffer, rx_size, src_ip, &src_port);
             if (len > 0) {
-                // checksum error detection
                 jump_table_checksum();
                 last_packet_time = get_absolute_time();
             }
-            memcpy(tx_buffer, temp_tx_buffer, 5); // copy the temp buffer to tx_buffer
-            // checksum generation
+            memcpy(tx_buffer, temp_tx_buffer, 5);
             jump_table_checksum_in();
             _sendto(0, tx_buffer, tx_size, src_ip, src_port);
         }
 
-        // hat erre meg nem jottem ra hogy hogyan kellene megoldani 
         if (multicore_fifo_rvalid()) {
         uint32_t signal = multicore_fifo_pop_blocking();
         printf("Core1 signal: %08X\n", signal);
         if (signal == 0xCAFEBABE) {
-            // Átváltás RAM-ban futó kódra
             core0_wait();
             }
-        }  // Várakozás az interruptra
+        }
 
     }
 }
@@ -498,11 +418,9 @@ void w5100s_interrupt_init() {
     gpio_set_dir(INT_PIN, GPIO_IN);
     gpio_pull_up(INT_PIN);
     
-    // W5100S interrupt beállítások
     uint8_t imr = IMR_RECV;        
     uint8_t sn_imr = Sn_IMR_RECV;  
     
-    // socket interrupt definition
     setIMR(imr);
     setSn_IMR(SOCKET_DHCP, sn_imr);
 }
@@ -537,7 +455,6 @@ void w5100s_init() {
     gpio_put(PIN_RESET, 1);
     sleep_ms(500);
 
-    // DMA init when using
 #ifdef USE_SPI_DMA
     dma_tx = dma_claim_unused_channel(true);
     dma_rx = dma_claim_unused_channel(true);
@@ -561,14 +478,11 @@ void w5100s_init() {
 void network_init() {
     wiz_PhyConf phyconf;
 
-
-    printf("Network Init Start\n");
     wizchip_init(0, 0);
     wizchip_setnetinfo(&net_info);
 
     setSn_CR(0, Sn_CR_CLOSE);
     setSn_CR(0, Sn_CR_OPEN);
-    // UDP socket create
     uint8_t sock_num = 0;
     socket(sock_num, Sn_MR_UDP, port, 0);
 
@@ -691,12 +605,6 @@ typedef struct {
 } minmax_t;
 
 float scale_value(uint16_t xt) {
-
-    // x_min, x_max = 14, 4089
-    // y_min, y_max = 0, 4095
-    // return ((x - x_min) / (x_max - x_min)) * (y_max - y_min) + y_min
-
-
     minmax_t x;
     minmax_t y;
 

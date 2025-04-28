@@ -6,7 +6,6 @@
 #include "pico/stdlib.h"
 #include "config.h"
 
-// Puffer a parancsokhoz
 char buffer[64];
 int buffer_pos = 0;
 extern wiz_NetInfo net_info;
@@ -149,7 +148,6 @@ void process_command(char* command) {
         if (sscanf(command, "port %d", &new_port) == 1) {
             port = new_port;
             save_configuration();
-            // wizchip_setnetinfo(&net_info);
             printf("Port changed to %d\n", new_port);
         }
         else {
@@ -164,7 +162,6 @@ void process_command(char* command) {
             net_info.ip[2] = ip2;
             net_info.ip[3] = ip3;
             save_configuration();
-            // wizchip_setnetinfo(&net_info);
             printf("IP changed to %d.%d.%d.%d\n", ip0, ip1, ip2, ip3);
         }
         else {
@@ -181,7 +178,6 @@ void process_command(char* command) {
             net_info.mac[4] = mac4;
             net_info.mac[5] = mac5;
             save_configuration();
-            // wizchip_setnetinfo(&net_info);
             printf("MAC changed to %02X:%02X:%02X:%02X:%02X:%02X\n", mac0, mac1, mac2, mac3, mac4, mac5);
         }
         else {
@@ -192,7 +188,7 @@ void process_command(char* command) {
     } else {
         printf("Unknown command\n");
     }
-    command[0] = '\0'; // Clear the command buffer
+    command[0] = '\0';
 }
 
 // Function: handle_serial_input
