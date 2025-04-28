@@ -21,6 +21,8 @@ utility/benchmark_udp
 *.egg-info/  # Python csomagok metaadatai
 venv/  # Virtuális környezet mappa (vagy más nevű, pl. env/)
 
+firmware/w5100s-evb-pico/src/teszt.py
+
 # KiCad fájlok
 *.kicad_sch
 *.kicad_pcb
