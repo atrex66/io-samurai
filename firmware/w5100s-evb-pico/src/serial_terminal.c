@@ -48,7 +48,14 @@ void load_configuration(){
     adc_max = flash_config->adc_max;
 }
 
-// process the command, and print the result (ip, ip x.x.x.x)
+// Function: process_command
+// Description: Processes commands received via serial input for configuring the io-samurai. 
+// Supports commands to display help, check current configuration, set IP, port, MAC, timeout, 
+// ADC min/max, restore defaults, reset the device, and save settings to flash. 
+// Parses commands with parameters (e.g., "ip x.x.x.x") using sscanf, validates formats, 
+// updates settings, and saves changes. 
+// Invalid commands or formats trigger error messages. 
+// Clears the command buffer after processing.
 void process_command(char* command) {
     if (strcmp(command, "help") == 0) {
         printf("Available commands:\n");
@@ -188,7 +195,12 @@ void process_command(char* command) {
     command[0] = '\0'; // Clear the command buffer
 }
 
-// input a command from the serial console
+// Function: handle_serial_input
+// Description: Manages serial input for a terminal interface. 
+// Locks/unlocks input based on src_ip[0] (0 enables, non-0 disables). 
+// Reads characters non-blocking via getchar_timeout_us, ignores non-printable ASCII (except '\r'), 
+// and echoes valid input. Stores characters in a buffer (up to 63) until '\r' or full, 
+// then null-terminates and processes the command via process_command, resetting the buffer.
 void handle_serial_input() {
     if (!enable_serial) {
         if (src_ip[0] == 0) {
@@ -202,7 +214,6 @@ void handle_serial_input() {
         enable_serial = false;
         printf("Terminal lock.\n");
     }
-    // receive a character with timeout
     char inByte = getchar_timeout_us(0);
     if (inByte == PICO_ERROR_TIMEOUT) {
         return;
@@ -213,22 +224,16 @@ void handle_serial_input() {
         }
     }
     printf("%c", inByte);
-    //Message coming in (check not terminating character) and guard for over message size
     if ( inByte != '\r' && (buffer_pos < 63) )
     {
-        //Add the incoming byte to our message
         buffer[buffer_pos] = inByte;
         buffer_pos++;
     }
-    //Full message received...
     else
     {
         printf("\n");
-        //Add null character to string
         buffer[buffer_pos] = '\0';
-        //Process the command
         process_command(buffer);
-        //Reset for the next message
         buffer_pos = 0;
     }
 }
