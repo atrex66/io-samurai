@@ -1,0 +1,1 @@
+g++ -std=c++11 -pthread -o usage_example io-samurai.cpp usage_example.cpp
