@@ -25,40 +25,40 @@ The `io-samurai` library is a C++ implementation for communicating with an IO Sa
    - `main.cpp` (example usage)
 
 2. **Install Dependencies** (on Ubuntu/Debian):
-   """
+   ```
    bash
    sudo apt update
    sudo apt install g++ libc6-dev
-   """
+   ```
 
 ## Compilation
 Compile the library and example using `g++`:
 
-"""
+```
 bash
 g++ -std=c++11 -o io_samurai io-samurai.cpp main.cpp
-"""
+```
 
 **Flags**:
 - `-std=c++11`: Enables C++11 features.
 - `-o io_samurai`: Specifies the output executable name.
 
 If the `jump_table` implementation is in a separate object file (e.g., `jump_table.o`):
-"""
+```
 bash
 g++ -std=c++11 -o io_samurai io-samurai.cpp main.cpp jump_table.o
-"""
+```
 
 Run the program:
-"""
+```
 bash
 ./io_samurai
-"""
+```
 
 ## Usage
 The `io-samurai` class provides a straightforward API for interacting with the device. Below is an example program (`main.cpp`):
 
-"""
+```
 cpp
 #include "io-samurai.h"
 #include <iostream>
@@ -105,7 +105,7 @@ int main() {
 
     return 0;
 }
-"""
+```
 
 ### API Overview
 - **Constructor/Destructor**:
@@ -157,10 +157,10 @@ int main() {
   - Check for permission issues (e.g., run as root if binding to a low port).
 - **Missing Headers**:
   - Install `libc6-dev`:
-    """
+    ```
     bash
     sudo apt install libc6-dev
-    """
+    ```
 
 ## Contributing
 - Report issues or suggest enhancements via email to atrex66@gmail.com
