@@ -22,6 +22,7 @@ utility/benchmark_udp
 venv/  # Virtuális környezet mappa (vagy más nevű, pl. env/)
 
 firmware/w5100s-evb-pico/src/teszt.py
+non_realtime/usage_example
 
 # KiCad fájlok
 *.kicad_sch
