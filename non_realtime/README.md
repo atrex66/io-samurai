@@ -1,7 +1,7 @@
 cat << 'EOF' > README.md
-# IoSamurai C++ Library
+# io-samurai C++ Library
 
-The `IoSamurai` library is a C++ implementation for communicating with an IO Samurai device over UDP. It is derived from a LinuxCNC HAL driver and provides a simple interface to control digital outputs, read digital inputs, and process analog inputs. The library is designed for POSIX-compliant systems (e.g., Linux) and uses standard C++11 features.
+The `io-samurai` library is a C++ implementation for communicating with an IO Samurai device over UDP. It is derived from a LinuxCNC HAL driver and provides a simple interface to control digital outputs, read digital inputs, and process analog inputs. The library is designed for POSIX-compliant systems (e.g., Linux) and uses standard C++11 features.
 
 ## Features
 - Initialize communication with an IO Samurai device using an IP address and port.
@@ -20,8 +20,8 @@ The `IoSamurai` library is a C++ implementation for communicating with an IO Sam
 
 ## Installation
 1. **Clone or Download**: Obtain the source files:
-   - `IoSamurai.h`
-   - `IoSamurai.cpp`
+   - `io-samurai.h`
+   - `io-samurai.cpp`
    - `main.cpp` (example usage)
    - `jump_table.h` (if available, for the checksum table)
 
@@ -33,19 +33,19 @@ The `IoSamurai` library is a C++ implementation for communicating with an IO Sam
    ```
 
 3. **Provide Jump Table**:
-   - The library includes a placeholder `jump_table` in `IoSamurai.cpp`:
+   - The library includes a placeholder `jump_table` in `io-samurai.cpp`:
      ```
      cpp
-     const uint8_t IoSamurai::jump_table[256] = {0}; // Dummy table
+     const uint8_t io-samurai::jump_table[256] = {0}; // Dummy table
      ```
-   - Replace it with the actual table from `jump_table.h` or define it directly in `IoSamurai.cpp`. Without the correct table, checksum verification will fail, causing communication errors.
+   - Replace it with the actual table from `jump_table.h` or define it directly in `io-samurai.cpp`. Without the correct table, checksum verification will fail, causing communication errors.
 
 ## Compilation
 Compile the library and example using `g++`:
 
 ```
 bash
-g++ -std=c++11 -o io_samurai IoSamurai.cpp main.cpp
+g++ -std=c++11 -o io_samurai io-samurai.cpp main.cpp
 ```
 
 **Flags**:
@@ -55,7 +55,7 @@ g++ -std=c++11 -o io_samurai IoSamurai.cpp main.cpp
 If you have a separate `jump_table` implementation (e.g., `jump_table.o`):
 ```
 bash
-g++ -std=c++11 -o io_samurai IoSamurai.cpp main.cpp jump_table.o
+g++ -std=c++11 -o io_samurai io-samurai.cpp main.cpp jump_table.o
 ```
 
 Run the program:
@@ -65,17 +65,17 @@ bash
 ```
 
 ## Usage
-The `IoSamurai` class provides a straightforward API for interacting with the device. Below is an example program (`main.cpp`):
+The `io-samurai` class provides a straightforward API for interacting with the device. Below is an example program (`main.cpp`):
 
 ```
 cpp
-#include "IoSamurai.h"
+#include "io-samurai.h"
 #include <iostream>
 #include <chrono>
 #include <thread>
 
 int main() {
-    IoSamurai io;
+    io-samurai io;
 
     // Initialize with IP and port
     if (!io.init("192.168.1.100", 8080)) {
@@ -118,8 +118,8 @@ int main() {
 
 ### API Overview
 - **Constructor/Destructor**:
-  - `IoSamurai()`: Initializes the object.
-  - `~IoSamurai()`: Closes the socket.
+  - `io-samurai()`: Initializes the object.
+  - `~io-samurai()`: Closes the socket.
 
 - **Initialization**:
   - `bool init(const std::string& ip_address, int port)`: Sets up the UDP socket with the given IP and port. Returns `true` on success.
@@ -148,7 +148,7 @@ int main() {
   - `void update()`: Sends output data and receives input data over UDP.
 
 ## Notes
-- **Jump Table**: The `jump_table` is critical for checksum verification. Replace the placeholder in `IoSamurai.cpp` with the actual table to avoid `Checksum error` messages.
+- **Jump Table**: The `jump_table` is critical for checksum verification. Replace the placeholder in `io-samurai.cpp` with the actual table to avoid `Checksum error` messages.
 - **Timing**: The example uses `std::this_thread::sleep_for` for a 1 ms interval. Adjust the sleep duration as needed for your application.
 - **Watchdog and Threading**: The watchdog and threading functionality were removed to simplify the library. The `update` function must be called manually in a loop.
 - **Error Handling**: Errors (e.g., socket failures, checksum errors) are logged to `std::cerr`. Check the console output for issues.
@@ -156,7 +156,7 @@ int main() {
 
 ## Troubleshooting
 - **Compilation Error: `sockaddr_in` incomplete type**:
-  - Ensure `<netinet/in.h>` is included in `IoSamurai.h`.
+  - Ensure `<netinet/in.h>` is included in `io-samurai.h`.
 - **Runtime Error: `Checksum error`**:
   - Provide the correct `jump_table` implementation.
 - **Socket Errors**:
