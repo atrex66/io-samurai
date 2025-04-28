@@ -1,4 +1,3 @@
-cat << 'EOF' > README.md
 # io-samurai C++ Library
 
 The `io-samurai` library is a C++ implementation for communicating with an IO Samurai device over UDP. It is derived from a LinuxCNC HAL driver and provides a simple interface to control digital outputs, read digital inputs, and process analog inputs. The library is designed for POSIX-compliant systems (e.g., Linux) and uses standard C++11 features.
@@ -16,58 +15,50 @@ The `io-samurai` library is a C++ implementation for communicating with an IO Sa
 - **Compiler**: `g++` (GCC 4.8 or later, supporting C++11).
 - **Operating System**: POSIX-compliant system (e.g., Linux, macOS). Windows is not supported without modifications.
 - **Libraries**: Standard C++ Library and POSIX socket APIs (included in `libc` on Linux).
-- **Jump Table**: A 256-byte checksum lookup table (`jump_table`) is required for proper operation. A placeholder is included, but the actual table must be provided.
+- **Jump Table**: A 256-byte checksum lookup table (`jump_table`) is required, provided via a symbolic link to `../firmware/w5100s-evb-pico/inc/jump_table.h`.
 
 ## Installation
 1. **Clone or Download**: Obtain the source files:
    - `io-samurai.h`
    - `io-samurai.cpp`
+   - `jump_table.h`  (symbolic link precreated, to the firmware jump_table)
    - `main.cpp` (example usage)
-   - `jump_table.h` (if available, for the checksum table)
 
 2. **Install Dependencies** (on Ubuntu/Debian):
-   ```
+   """
    bash
    sudo apt update
    sudo apt install g++ libc6-dev
-   ```
-
-3. **Provide Jump Table**:
-   - The library includes a placeholder `jump_table` in `io-samurai.cpp`:
-     ```
-     cpp
-     const uint8_t io-samurai::jump_table[256] = {0}; // Dummy table
-     ```
-   - Replace it with the actual table from `jump_table.h` or define it directly in `io-samurai.cpp`. Without the correct table, checksum verification will fail, causing communication errors.
+   """
 
 ## Compilation
 Compile the library and example using `g++`:
 
-```
+"""
 bash
 g++ -std=c++11 -o io_samurai io-samurai.cpp main.cpp
-```
+"""
 
 **Flags**:
 - `-std=c++11`: Enables C++11 features.
 - `-o io_samurai`: Specifies the output executable name.
 
-If you have a separate `jump_table` implementation (e.g., `jump_table.o`):
-```
+If the `jump_table` implementation is in a separate object file (e.g., `jump_table.o`):
+"""
 bash
 g++ -std=c++11 -o io_samurai io-samurai.cpp main.cpp jump_table.o
-```
+"""
 
 Run the program:
-```
+"""
 bash
 ./io_samurai
-```
+"""
 
 ## Usage
 The `io-samurai` class provides a straightforward API for interacting with the device. Below is an example program (`main.cpp`):
 
-```
+"""
 cpp
 #include "io-samurai.h"
 #include <iostream>
@@ -114,7 +105,7 @@ int main() {
 
     return 0;
 }
-```
+"""
 
 ### API Overview
 - **Constructor/Destructor**:
@@ -148,7 +139,7 @@ int main() {
   - `void update()`: Sends output data and receives input data over UDP.
 
 ## Notes
-- **Jump Table**: The `jump_table` is critical for checksum verification. Replace the placeholder in `io-samurai.cpp` with the actual table to avoid `Checksum error` messages.
+- **Jump Table**: The `jump_table` is provided via a symbolic link to `../firmware/w5100s-evb-pico/inc/jump_table.h`. Ensure the original file exists and defines `extern const uint8_t jump_table[256];` or the actual table.
 - **Timing**: The example uses `std::this_thread::sleep_for` for a 1 ms interval. Adjust the sleep duration as needed for your application.
 - **Watchdog and Threading**: The watchdog and threading functionality were removed to simplify the library. The `update` function must be called manually in a loop.
 - **Error Handling**: Errors (e.g., socket failures, checksum errors) are logged to `std::cerr`. Check the console output for issues.
@@ -157,22 +148,22 @@ int main() {
 ## Troubleshooting
 - **Compilation Error: `sockaddr_in` incomplete type**:
   - Ensure `<netinet/in.h>` is included in `io-samurai.h`.
+- **Compilation Error: `jump_table` undefined**:
+  - Verify the symbolic link to `jump_table.h` is correct and the table is defined or linked.
 - **Runtime Error: `Checksum error`**:
-  - Provide the correct `jump_table` implementation.
+  - Ensure the `jump_table` implementation is correct and accessible.
 - **Socket Errors**:
   - Verify the IP address and port are correct and the device is reachable.
   - Check for permission issues (e.g., run as root if binding to a low port).
 - **Missing Headers**:
   - Install `libc6-dev`:
-    ```
+    """
     bash
     sudo apt install libc6-dev
-    ```
+    """
 
 ## Contributing
-- Provide the `jump_table` implementation to improve functionality.
-- Report issues or suggest enhancements via email to stellarwanderer@proton.me.
+- Report issues or suggest enhancements via email to atrex66@gmail.com
 
 ## License
-MIT License (based on the original LinuxCNC HAL driver by Viola Zsolt).
-EOF
+MIT License (based on the original LinuxCNC HAL driver by Viola Zsolt)

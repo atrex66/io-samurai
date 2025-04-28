@@ -8,7 +8,7 @@
 #include <cstring>
 #include <iostream>
 #include <cmath>
-#include "../firmware/w5100s-evb-pico/inc/jump_table.h"
+#include "jump_table.h"
 
 // Placeholder jump_table (replace with actual implementation)
 uint8_t IoSamurai::jump_tbl[256];

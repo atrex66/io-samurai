@@ -62,7 +62,6 @@ private:
     // Constants
     static constexpr float ALPHA = 0.1f; // Low-pass filter constant (EMA)
     static constexpr float ADC_MAX = 4095.0f; // Maximum ADC value (12-bit resolution)
-    static constexpr int WATCHDOG_TIMEOUT = 100; // ~10 ms timeout
     static constexpr size_t RX_BUFFER_SIZE = 5;
     static constexpr size_t TX_BUFFER_SIZE = 3;
 
