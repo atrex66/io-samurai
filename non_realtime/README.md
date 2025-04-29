@@ -20,9 +20,9 @@ The `io-samurai` library is a C++ implementation for communicating with an IO Sa
 ## Installation
 1. **Clone or Download**: Obtain the source files:
    - `io-samurai.h`
-   - `io-samurai.cpp`
-   - `jump_table.h`  (symbolic link precreated, to the firmware jump_table)
-   - `main.cpp` (example usage)
+   - `io-samurai.cpp` 
+   - `jump_table.h`  (symbolic link, precreated, relative link to the firmware jump_table)
+   - `usage_example.cpp` (example usage)
 
 2. **Install Dependencies** (on Ubuntu/Debian):
    ```
@@ -139,9 +139,9 @@ int main() {
   - `void update()`: Sends output data and receives input data over UDP.
 
 ## Notes
-- **Jump Table**: The `jump_table` is provided via a symbolic link to `../firmware/w5100s-evb-pico/inc/jump_table.h`. Ensure the original file exists and defines `extern const uint8_t jump_table[256];` or the actual table.
+- **Jump Table**: The `jump_table` is provided via a symbolic link to `../firmware/w5100s-evb-pico/inc/jump_table.h`.
 - **Timing**: The example uses `std::this_thread::sleep_for` for a 1 ms interval. Adjust the sleep duration as needed for your application.
-- **Watchdog and Threading**: The watchdog and threading functionality were removed to simplify the library. The `update` function must be called manually in a loop.
+- **Watchdog and Threading**: The watchdog functionality were removed to simplify the library. The `update` function must be called manually in a loop.
 - **Error Handling**: Errors (e.g., socket failures, checksum errors) are logged to `std::cerr`. Check the console output for issues.
 - **Platform**: The library uses POSIX socket APIs (`sys/socket.h`, `netinet/in.h`). For Windows, rewrite the socket code using Winsock.
 
