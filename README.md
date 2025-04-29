@@ -4,7 +4,7 @@ An open-source, budget-friendly CNC Input Output interface for LinuxCNC, 16 inpu
 ![io-samurai PCB](docs/images/last_proto.png)
 
 ## Features
-- **High-Speed Interface**: W5100S-evb-pico Ethernet.
+- **High-Speed Interface**: W5100S-evb-pico Ethernet. https://docs.wiznet.io/Product/iEthernet/W5100S/w5100s-evb-pico
 - **Inputs**: 16 channels (MCP23017, I2C), 20–50 V, with 10 kΩ/1.5 kΩ divider and 3.6 V Zener protection.
 - **Outputs**: 8 channels (TD62783 Darlington driver, MCP23008-controlled), 50 V, 500 mA/channel.
 - **Analog Inputs**: 1 channels (GP26), 12-bit, ~10 kΩ potentiometer, 100 nF filtering.
