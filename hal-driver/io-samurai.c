@@ -401,10 +401,10 @@ int rtapi_app_main(void) {
             init_socket(&hal_data[j]);
             rtapi_print_msg(RTAPI_MSG_INFO, "io-samurai.%d: init_socket ready..\n", j);
 
-            memchr(name, 0, sizeof(name));
+            memset(name, 0, sizeof(name));
 
             for (int i = 0; i < 16; i++) {
-                memchr(name, 0, sizeof(name));
+                memset(name, 0, sizeof(name));
                 snprintf(name, sizeof(name), "io-samurai.%d.input-%02d", j, i);
                 r = hal_pin_bit_newf(HAL_OUT, &hal_data[j].input_data[i], comp_id, name, i);
                 if (r < 0) {
@@ -415,7 +415,7 @@ int rtapi_app_main(void) {
             }
 
             for (int i = 0; i < 16; i++) {
-                memchr(name, 0, sizeof(name));
+                memset(name, 0, sizeof(name));
                 // create io-samurai instance
                 snprintf(name, sizeof(name), "io-samurai.%d.input-%02d-not", j, i);
                 r = hal_pin_bit_newf(HAL_OUT, &hal_data[j].input_data_not[i], comp_id, name, i);
@@ -427,7 +427,7 @@ int rtapi_app_main(void) {
             }
 
             for (int i = 0; i < 8; i++) {
-                memchr(name, 0, sizeof(name));
+                memset(name, 0, sizeof(name));
                 snprintf(name, sizeof(name), "io-samurai.%d.output-%02d", j, i);
                 r = hal_pin_bit_newf(HAL_IN, &hal_data[j].output_data[i], comp_id, name, i);
                 if (r < 0) {
@@ -437,7 +437,7 @@ int rtapi_app_main(void) {
                 }
             }
 
-            memchr(name, 0, sizeof(name));
+            memset(name, 0, sizeof(name));
             snprintf(name, sizeof(name), "io-samurai.%d.connected", j);
 
             r = hal_pin_bit_newf(HAL_IN, &hal_data[j].connected, comp_id, name, j);
@@ -447,7 +447,7 @@ int rtapi_app_main(void) {
                 return r;
             }
 
-            memchr(name, 0, sizeof(name));
+            memset(name, 0, sizeof(name));
             snprintf(name, sizeof(name), "io-samurai.%d.io-ready-in", j);
 
                r = hal_pin_bit_newf(HAL_IN, &hal_data[j].io_ready_in, comp_id, name, j);
@@ -457,7 +457,7 @@ int rtapi_app_main(void) {
                 return r;
             }
 
-            memchr(name, 0, sizeof(name));
+            memset(name, 0, sizeof(name));
             snprintf(name, sizeof(name), "io-samurai.%d.io-ready-out", j);
 
             r = hal_pin_bit_newf(HAL_OUT, &hal_data[j].io_ready_out, comp_id, name, j);
@@ -467,7 +467,7 @@ int rtapi_app_main(void) {
                 return r;
             }
 
-            memchr(name, 0, sizeof(name));
+            memset(name, 0, sizeof(name));
             snprintf(name, sizeof(name), "io-samurai.%d.analog-in", j);
 
             r = hal_pin_float_newf(HAL_OUT, &hal_data[j].analog_in, comp_id, name, j);
@@ -477,7 +477,7 @@ int rtapi_app_main(void) {
                 return r;
             }
 
-            memchr(name, 0, sizeof(name));
+            memset(name, 0, sizeof(name));
             snprintf(name, sizeof(name), "io-samurai.%d.analog-in-s32", j);
 
             r = hal_pin_s32_newf(HAL_OUT, &hal_data[j].analog_in_s32, comp_id, name, j);
@@ -487,7 +487,7 @@ int rtapi_app_main(void) {
                 return r;
             }
 
-            memchr(name, 0, sizeof(name));
+            memset(name, 0, sizeof(name));
             snprintf(name, sizeof(name), "io-samurai.%d.analog-min", j);
 
             r = hal_pin_float_newf(HAL_IN, &hal_data[j].analog_min, comp_id, name, j);
@@ -498,7 +498,7 @@ int rtapi_app_main(void) {
             }
             *hal_data[j].analog_min = 0.0f;
 
-            memchr(name, 0, sizeof(name));
+            memset(name, 0, sizeof(name));
             snprintf(name, sizeof(name), "io-samurai.%d.analog-max", j);
 
             r = hal_pin_float_newf(HAL_IN, &hal_data[j].analog_max, comp_id, name, j);
@@ -509,7 +509,7 @@ int rtapi_app_main(void) {
             }
             *hal_data[j].analog_max = 1.0f;
 
-            memchr(name, 0, sizeof(name));
+            memset(name, 0, sizeof(name));
             snprintf(name, sizeof(name), "io-samurai.%d.analog-rounding", j);
 
 
@@ -521,7 +521,7 @@ int rtapi_app_main(void) {
             }
             *hal_data[j].analog_rounding = 0;
 
-            memchr(name, 0, sizeof(name));
+            memset(name, 0, sizeof(name));
             snprintf(name, sizeof(name), "io-samurai.%d.analog-lowpass", j);
 
 
@@ -533,7 +533,7 @@ int rtapi_app_main(void) {
             }
             *hal_data[j].analog_lowpass = 0;
 
-            memchr(name, 0, sizeof(name));
+            memset(name, 0, sizeof(name));
             snprintf(name, sizeof(name), "io-samurai.%d.elapsed-time", j);
 
 
@@ -545,7 +545,7 @@ int rtapi_app_main(void) {
             }
             *hal_data[j].current_tm = 0;
 
-            memchr(name, 0, sizeof(name));
+            memset(name, 0, sizeof(name));
             snprintf(name, sizeof(name), "io-samurai.%d.oled-off", j);
 
 
