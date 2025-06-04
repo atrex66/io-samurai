@@ -11,7 +11,6 @@ J5,1,Screw_Terminal_01x02,TerminalBlock_Xinya_XY308-2.54-2P_1x02_P2.54mm_Horizon
 J6,1,Conn_01x04_Pin,PinHeader_1x04_P2.54mm_Vertical,,,,tht,"Generic connector, single row, 01x04, script generated"
 J7,1,Screw_Terminal_01x03,TerminalBlock_Xinya_XY308-2.54-3P_1x03_P2.54mm_Horizontal,,,,tht,"Generic screw terminal, single row, 01x03, script generated (kicad-library-utils/schlib/autogen/connector/)"
 "J8, J9",2,Conn_01x06_Pin,PinHeader_1x06_P2.54mm_Vertical,,,,tht,"Generic connector, single row, 01x06, script generated"
-JP1,1,Jumper_2_Open,SolderJumper-2_P1.3mm_Open_TrianglePad1.0x1.5mm,,,,tht,"Jumper, 2-pole, open"
 "R1, R10, R11, R12, R13, R14, R15, R16, R2, R3, R36, R4, R5, R6, R7, R8, R9",17,10k,R_0805_2012Metric,,,,smt,Resistor
 "R17, R18",2,4k7,R_0805_2012Metric,,,,smt,Resistor
 R19,1,100k,R_0805_2012Metric,,,,smt,Resistor
